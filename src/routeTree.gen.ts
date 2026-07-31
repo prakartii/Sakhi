@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CashflowRouteImport } from './routes/cashflow'
+import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as NoticedRouteImport } from './routes/noticed'
 import { Route as SchemesRouteImport } from './routes/schemes'
@@ -23,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
 const CashflowRoute = CashflowRouteImport.update({
   id: '/cashflow',
   path: '/cashflow',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InventoryRoute = InventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MemoryRoute = MemoryRouteImport.update({
@@ -44,6 +50,7 @@ const SchemesRoute = SchemesRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cashflow': typeof CashflowRoute
+  '/inventory': typeof InventoryRoute
   '/memory': typeof MemoryRoute
   '/noticed': typeof NoticedRoute
   '/schemes': typeof SchemesRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cashflow': typeof CashflowRoute
+  '/inventory': typeof InventoryRoute
   '/memory': typeof MemoryRoute
   '/noticed': typeof NoticedRoute
   '/schemes': typeof SchemesRoute
@@ -59,21 +67,31 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/cashflow': typeof CashflowRoute
+  '/inventory': typeof InventoryRoute
   '/memory': typeof MemoryRoute
   '/noticed': typeof NoticedRoute
   '/schemes': typeof SchemesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cashflow' | '/memory' | '/noticed' | '/schemes'
+  fullPaths:
+    '/' | '/cashflow' | '/inventory' | '/memory' | '/noticed' | '/schemes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cashflow' | '/memory' | '/noticed' | '/schemes'
-  id: '__root__' | '/' | '/cashflow' | '/memory' | '/noticed' | '/schemes'
+  to: '/' | '/cashflow' | '/inventory' | '/memory' | '/noticed' | '/schemes'
+  id:
+    | '__root__'
+    | '/'
+    | '/cashflow'
+    | '/inventory'
+    | '/memory'
+    | '/noticed'
+    | '/schemes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CashflowRoute: typeof CashflowRoute
+  InventoryRoute: typeof InventoryRoute
   MemoryRoute: typeof MemoryRoute
   NoticedRoute: typeof NoticedRoute
   SchemesRoute: typeof SchemesRoute
@@ -93,6 +111,13 @@ declare module '@tanstack/react-router' {
       path: '/cashflow'
       fullPath: '/cashflow'
       preLoaderRoute: typeof CashflowRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventory': {
+      id: '/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof InventoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/memory': {
@@ -122,6 +147,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CashflowRoute: CashflowRoute,
+  InventoryRoute: InventoryRoute,
   MemoryRoute: MemoryRoute,
   NoticedRoute: NoticedRoute,
   SchemesRoute: SchemesRoute,
