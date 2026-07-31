@@ -25,7 +25,7 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "Sakhi Companion — she speaks, and her day appears" },
       {
         property: "og:description",
-        content: "Voice-first daily briefing for Indian women entrepreneurs.",
+        content: "One voice check-in in your own language. Sakhi remembers every order, price and supplier — then tells you what to do next.",
       },
     ],
   }),

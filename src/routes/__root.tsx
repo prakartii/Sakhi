@@ -77,15 +77,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Sakhi — AI business companion for women entrepreneurs" },
+      { title: "Sakhi Companion — she speaks, and her day appears" },
       {
         name: "description",
         content:
-          "Sakhi by Yuukke Catalyst — speak your business, and Sakhi remembers, predicts and acts on it.",
+          "One voice check-in in your own language. Sakhi remembers every order, price and supplier — then tells you what to do next.",
       },
       { name: "author", content: "Yuukke Catalyst" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:title", content: "Sakhi Companion — she speaks, and her day appears" },
+      { name: "twitter:title", content: "Sakhi Companion — she speaks, and her day appears" },
+      { property: "og:description", content: "One voice check-in in your own language. Sakhi remembers every order, price and supplier — then tells you what to do next." },
+      { name: "twitter:description", content: "One voice check-in in your own language. Sakhi remembers every order, price and supplier — then tells you what to do next." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0e37fbb8-c16a-4396-b122-cf5f3afd4af9/id-preview-8101b758--c3c09779-fad1-4ae6-9be7-c99cb636175e.lovable.app-1785528295315.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0e37fbb8-c16a-4396-b122-cf5f3afd4af9/id-preview-8101b758--c3c09779-fad1-4ae6-9be7-c99cb636175e.lovable.app-1785528295315.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
