@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CashflowRouteImport } from './routes/cashflow'
 import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as NoticedRouteImport } from './routes/noticed'
+import { Route as SchemesRouteImport } from './routes/schemes'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const NoticedRoute = NoticedRouteImport.update({
   path: '/noticed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SchemesRoute = SchemesRouteImport.update({
+  id: '/schemes',
+  path: '/schemes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cashflow': typeof CashflowRoute
   '/memory': typeof MemoryRoute
   '/noticed': typeof NoticedRoute
+  '/schemes': typeof SchemesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cashflow': typeof CashflowRoute
   '/memory': typeof MemoryRoute
   '/noticed': typeof NoticedRoute
+  '/schemes': typeof SchemesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/cashflow': typeof CashflowRoute
   '/memory': typeof MemoryRoute
   '/noticed': typeof NoticedRoute
+  '/schemes': typeof SchemesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cashflow' | '/memory' | '/noticed'
+  fullPaths: '/' | '/cashflow' | '/memory' | '/noticed' | '/schemes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cashflow' | '/memory' | '/noticed'
-  id: '__root__' | '/' | '/cashflow' | '/memory' | '/noticed'
+  to: '/' | '/cashflow' | '/memory' | '/noticed' | '/schemes'
+  id: '__root__' | '/' | '/cashflow' | '/memory' | '/noticed' | '/schemes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +76,7 @@ export interface RootRouteChildren {
   CashflowRoute: typeof CashflowRoute
   MemoryRoute: typeof MemoryRoute
   NoticedRoute: typeof NoticedRoute
+  SchemesRoute: typeof SchemesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +109,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NoticedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/schemes': {
+      id: '/schemes'
+      path: '/schemes'
+      fullPath: '/schemes'
+      preLoaderRoute: typeof SchemesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +124,7 @@ const rootRouteChildren: RootRouteChildren = {
   CashflowRoute: CashflowRoute,
   MemoryRoute: MemoryRoute,
   NoticedRoute: NoticedRoute,
+  SchemesRoute: SchemesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
