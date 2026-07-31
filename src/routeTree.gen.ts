@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MemoryRouteImport } from './routes/memory'
+import { Route as NoticedRouteImport } from './routes/noticed'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const MemoryRoute = MemoryRouteImport.update({
   path: '/memory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NoticedRoute = NoticedRouteImport.update({
+  id: '/noticed',
+  path: '/noticed',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/memory': typeof MemoryRoute
+  '/noticed': typeof NoticedRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/memory': typeof MemoryRoute
+  '/noticed': typeof NoticedRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/memory': typeof MemoryRoute
+  '/noticed': typeof NoticedRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/memory'
+  fullPaths: '/' | '/memory' | '/noticed'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/memory'
-  id: '__root__' | '/' | '/memory'
+  to: '/' | '/memory' | '/noticed'
+  id: '__root__' | '/' | '/memory' | '/noticed'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   MemoryRoute: typeof MemoryRoute
+  NoticedRoute: typeof NoticedRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MemoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/noticed': {
+      id: '/noticed'
+      path: '/noticed'
+      fullPath: '/noticed'
+      preLoaderRoute: typeof NoticedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MemoryRoute: MemoryRoute,
+  NoticedRoute: NoticedRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
