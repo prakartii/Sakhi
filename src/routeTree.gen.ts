@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CashflowRouteImport } from './routes/cashflow'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as MemoryRouteImport } from './routes/memory'
+import { Route as MentorsRouteImport } from './routes/mentors'
 import { Route as NoticedRouteImport } from './routes/noticed'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
 import { Route as SchemesRouteImport } from './routes/schemes'
@@ -37,6 +38,11 @@ const MemoryRoute = MemoryRouteImport.update({
   path: '/memory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MentorsRoute = MentorsRouteImport.update({
+  id: '/mentors',
+  path: '/mentors',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NoticedRoute = NoticedRouteImport.update({
   id: '/noticed',
   path: '/noticed',
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/cashflow': typeof CashflowRoute
   '/inventory': typeof InventoryRoute
   '/memory': typeof MemoryRoute
+  '/mentors': typeof MentorsRoute
   '/noticed': typeof NoticedRoute
   '/opportunities': typeof OpportunitiesRoute
   '/schemes': typeof SchemesRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/cashflow': typeof CashflowRoute
   '/inventory': typeof InventoryRoute
   '/memory': typeof MemoryRoute
+  '/mentors': typeof MentorsRoute
   '/noticed': typeof NoticedRoute
   '/opportunities': typeof OpportunitiesRoute
   '/schemes': typeof SchemesRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/cashflow': typeof CashflowRoute
   '/inventory': typeof InventoryRoute
   '/memory': typeof MemoryRoute
+  '/mentors': typeof MentorsRoute
   '/noticed': typeof NoticedRoute
   '/opportunities': typeof OpportunitiesRoute
   '/schemes': typeof SchemesRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/cashflow'
     | '/inventory'
     | '/memory'
+    | '/mentors'
     | '/noticed'
     | '/opportunities'
     | '/schemes'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/cashflow'
     | '/inventory'
     | '/memory'
+    | '/mentors'
     | '/noticed'
     | '/opportunities'
     | '/schemes'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/cashflow'
     | '/inventory'
     | '/memory'
+    | '/mentors'
     | '/noticed'
     | '/opportunities'
     | '/schemes'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   CashflowRoute: typeof CashflowRoute
   InventoryRoute: typeof InventoryRoute
   MemoryRoute: typeof MemoryRoute
+  MentorsRoute: typeof MentorsRoute
   NoticedRoute: typeof NoticedRoute
   OpportunitiesRoute: typeof OpportunitiesRoute
   SchemesRoute: typeof SchemesRoute
@@ -151,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MemoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mentors': {
+      id: '/mentors'
+      path: '/mentors'
+      fullPath: '/mentors'
+      preLoaderRoute: typeof MentorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/noticed': {
       id: '/noticed'
       path: '/noticed'
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   CashflowRoute: CashflowRoute,
   InventoryRoute: InventoryRoute,
   MemoryRoute: MemoryRoute,
+  MentorsRoute: MentorsRoute,
   NoticedRoute: NoticedRoute,
   OpportunitiesRoute: OpportunitiesRoute,
   SchemesRoute: SchemesRoute,
