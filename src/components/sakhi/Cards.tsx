@@ -74,10 +74,10 @@ export function Craft({
   children,
   texture,
 }: {
-  tone?: Tone;
-  className?: string;
+  tone?: Tone | undefined;
+  className?: string | undefined;
   children: ReactNode;
-  texture?: "weave" | "blockprint";
+  texture?: "weave" | "blockprint" | undefined;
 }) {
   return (
     <article
@@ -109,7 +109,7 @@ export function Stat({
 }: {
   label: string;
   value: string;
-  sub?: string;
+  sub?: string | undefined;
   className?: string;
 }) {
   return (
