@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CashflowRouteImport } from './routes/cashflow'
 import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as NoticedRouteImport } from './routes/noticed'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CashflowRoute = CashflowRouteImport.update({
+  id: '/cashflow',
+  path: '/cashflow',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MemoryRoute = MemoryRouteImport.update({
@@ -31,30 +37,34 @@ const NoticedRoute = NoticedRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cashflow': typeof CashflowRoute
   '/memory': typeof MemoryRoute
   '/noticed': typeof NoticedRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cashflow': typeof CashflowRoute
   '/memory': typeof MemoryRoute
   '/noticed': typeof NoticedRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cashflow': typeof CashflowRoute
   '/memory': typeof MemoryRoute
   '/noticed': typeof NoticedRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/memory' | '/noticed'
+  fullPaths: '/' | '/cashflow' | '/memory' | '/noticed'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/memory' | '/noticed'
-  id: '__root__' | '/' | '/memory' | '/noticed'
+  to: '/' | '/cashflow' | '/memory' | '/noticed'
+  id: '__root__' | '/' | '/cashflow' | '/memory' | '/noticed'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CashflowRoute: typeof CashflowRoute
   MemoryRoute: typeof MemoryRoute
   NoticedRoute: typeof NoticedRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cashflow': {
+      id: '/cashflow'
+      path: '/cashflow'
+      fullPath: '/cashflow'
+      preLoaderRoute: typeof CashflowRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/memory': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CashflowRoute: CashflowRoute,
   MemoryRoute: MemoryRoute,
   NoticedRoute: NoticedRoute,
 }
