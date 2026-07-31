@@ -10,33 +10,128 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CashflowRouteImport } from './routes/cashflow'
+import { Route as InventoryRouteImport } from './routes/inventory'
+import { Route as MemoryRouteImport } from './routes/memory'
+import { Route as MentorsRouteImport } from './routes/mentors'
+import { Route as NoticedRouteImport } from './routes/noticed'
+import { Route as OpportunitiesRouteImport } from './routes/opportunities'
+import { Route as SchemesRouteImport } from './routes/schemes'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CashflowRoute = CashflowRouteImport.update({
+  id: '/cashflow',
+  path: '/cashflow',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InventoryRoute = InventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MemoryRoute = MemoryRouteImport.update({
+  id: '/memory',
+  path: '/memory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MentorsRoute = MentorsRouteImport.update({
+  id: '/mentors',
+  path: '/mentors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NoticedRoute = NoticedRouteImport.update({
+  id: '/noticed',
+  path: '/noticed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpportunitiesRoute = OpportunitiesRouteImport.update({
+  id: '/opportunities',
+  path: '/opportunities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SchemesRoute = SchemesRouteImport.update({
+  id: '/schemes',
+  path: '/schemes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cashflow': typeof CashflowRoute
+  '/inventory': typeof InventoryRoute
+  '/memory': typeof MemoryRoute
+  '/mentors': typeof MentorsRoute
+  '/noticed': typeof NoticedRoute
+  '/opportunities': typeof OpportunitiesRoute
+  '/schemes': typeof SchemesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cashflow': typeof CashflowRoute
+  '/inventory': typeof InventoryRoute
+  '/memory': typeof MemoryRoute
+  '/mentors': typeof MentorsRoute
+  '/noticed': typeof NoticedRoute
+  '/opportunities': typeof OpportunitiesRoute
+  '/schemes': typeof SchemesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cashflow': typeof CashflowRoute
+  '/inventory': typeof InventoryRoute
+  '/memory': typeof MemoryRoute
+  '/mentors': typeof MentorsRoute
+  '/noticed': typeof NoticedRoute
+  '/opportunities': typeof OpportunitiesRoute
+  '/schemes': typeof SchemesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/cashflow'
+    | '/inventory'
+    | '/memory'
+    | '/mentors'
+    | '/noticed'
+    | '/opportunities'
+    | '/schemes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/cashflow'
+    | '/inventory'
+    | '/memory'
+    | '/mentors'
+    | '/noticed'
+    | '/opportunities'
+    | '/schemes'
+  id:
+    | '__root__'
+    | '/'
+    | '/cashflow'
+    | '/inventory'
+    | '/memory'
+    | '/mentors'
+    | '/noticed'
+    | '/opportunities'
+    | '/schemes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CashflowRoute: typeof CashflowRoute
+  InventoryRoute: typeof InventoryRoute
+  MemoryRoute: typeof MemoryRoute
+  MentorsRoute: typeof MentorsRoute
+  NoticedRoute: typeof NoticedRoute
+  OpportunitiesRoute: typeof OpportunitiesRoute
+  SchemesRoute: typeof SchemesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +143,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cashflow': {
+      id: '/cashflow'
+      path: '/cashflow'
+      fullPath: '/cashflow'
+      preLoaderRoute: typeof CashflowRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventory': {
+      id: '/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof InventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/memory': {
+      id: '/memory'
+      path: '/memory'
+      fullPath: '/memory'
+      preLoaderRoute: typeof MemoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mentors': {
+      id: '/mentors'
+      path: '/mentors'
+      fullPath: '/mentors'
+      preLoaderRoute: typeof MentorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/noticed': {
+      id: '/noticed'
+      path: '/noticed'
+      fullPath: '/noticed'
+      preLoaderRoute: typeof NoticedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/opportunities': {
+      id: '/opportunities'
+      path: '/opportunities'
+      fullPath: '/opportunities'
+      preLoaderRoute: typeof OpportunitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/schemes': {
+      id: '/schemes'
+      path: '/schemes'
+      fullPath: '/schemes'
+      preLoaderRoute: typeof SchemesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CashflowRoute: CashflowRoute,
+  InventoryRoute: InventoryRoute,
+  MemoryRoute: MemoryRoute,
+  MentorsRoute: MentorsRoute,
+  NoticedRoute: NoticedRoute,
+  OpportunitiesRoute: OpportunitiesRoute,
+  SchemesRoute: SchemesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
