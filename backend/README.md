@@ -44,7 +44,9 @@ backend/
 │   ├── services/           Business logic layer. Routers call services; services
 │   │                        call repositories; services never touch AsyncSession
 │   │                        directly. Empty until business logic is implemented.
-│   ├── ai/                 AI integration layer — all four AI/ML components.
+│   ├── ai/                 AI integration layer — the four AI/ML components,
+│   │   │                    plus the generation layer built on top of them
+│   │   │                    (idea -> brand -> website -> content -> growth).
 │   │   ├── providers/          Provider-agnostic `AIProvider` chat interface
 │   │   │                        (Groq by default), via get_ai_provider().
 │   │   ├── voice_parsing/      Transcript -> structured business_memory
@@ -55,10 +57,55 @@ backend/
 │   │   │                        stockout dates, cashflow/revenue trend.
 │   │   ├── rules/               Deterministic weighted-criteria DSL: scheme/
 │   │   │                        opportunity eligibility, mentor-fit gating.
-│   │   └── embeddings/          Chunk + embed business_memory.content
-│   │                            (OpenAI text-embedding-3-small by default,
-│   │                            get_embedding_provider()) for pgvector
-│   │                            semantic search — needs migration 19.
+│   │   ├── embeddings/          Chunk + embed business_memory.content
+│   │   │                        (OpenAI text-embedding-3-small by default,
+│   │   │                        get_embedding_provider()) for pgvector
+│   │   │                        semantic search — needs migration 19.
+│   │   ├── business/            BusinessProfile — the central "digital
+│   │   │                        twin" every generation service reads.
+│   │   │                        parse_onboarding() builds one from a
+│   │   │                        free-text/voice description.
+│   │   ├── brand/                Brand Studio: generate_brand(profile) ->
+│   │   │                        BrandKit (naming, voice, palette,
+│   │   │                        typography, bios, logo_prompt).
+│   │   ├── image/                generate_image(prompt, kind, size) ->
+│   │   │                        GeneratedImage — the one generation
+│   │   │                        service that isn't an LLM call, via
+│   │   │                        get_image_provider() (Together AI/FLUX by
+│   │   │                        default, settings.IMAGE_PROVIDER).
+│   │   ├── website/              generate_site(profile, brand) ->
+│   │   │                        WebsiteSpec (landing/about/products/
+│   │   │                        contact/FAQ + SEO) — conditioned on both
+│   │   │                        the profile and its BrandKit.
+│   │   ├── content/              generate_calendar(profile, brand, month,
+│   │   │                        platforms) -> list[ContentPost]. Rules +
+│   │   │                        LLM split in two: scheduler.py picks
+│   │   │                        dates/platforms/types/times/festivals
+│   │   │                        with no LLM; generator.py writes copy for
+│   │   │                        every slot in one chat_json() call.
+│   │   ├── analytics/            summarize(profile, metrics) ->
+│   │   │                        AnalyticsSummary. Same rules/LLM split:
+│   │   │                        facts.py reuses app.ai.forecasting
+│   │   │                        directly (revenue trend, stockout risk),
+│   │   │                        no LLM; summarizer.py only narrates.
+│   │   ├── orchestrator/         handle(request, profile, context) ->
+│   │   │                        OrchestratorResponse — the router tying
+│   │   │                        every service above together. router.py
+│   │   │                        decides which services a request needs
+│   │   │                        (no LLM, phrase rules); code assembles
+│   │   │                        brand/analytics/retrieved-memory facts;
+│   │   │                        one chat_json() call answers from them.
+│   │   └── voice/                 Swappable speech I/O wrapped AROUND the
+│   │                            above (not a generation service, not
+│   │                            aware they exist): transcribe()/
+│   │                            synthesize() via get_voice_provider()
+│   │                            (Sarvam AI by default, settings.
+│   │                            VOICE_PROVIDER) or a browser_provider.py
+│   │                            fallback that passes through text the Web
+│   │                            Speech API already transcribed
+│   │                            client-side. should_pivot() is a pure
+│   │                            rule for an optional English-translation
+│   │                            pivot around Groq (off by default).
 │   │                            Callers everywhere depend on each
 │   │                            subpackage's interface, never a vendor SDK
 │   │                            directly.

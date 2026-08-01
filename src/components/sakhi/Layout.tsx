@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Globe, Mic, ChevronDown } from "lucide-react";
+import { Globe, Mic, ChevronDown, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 
 const NAV = [
@@ -11,6 +11,17 @@ const NAV = [
   { to: "/mentors", label: "Mentors" },
   { to: "/inventory", label: "Inventory" },
   { to: "/opportunities", label: "Opportunity Engine" },
+] as const;
+
+const GROW_NAV = [
+  { to: "/dashboard", label: "Dashboard" },
+  { to: "/business-setup", label: "Business Setup" },
+  { to: "/brand-studio", label: "Brand Studio" },
+  { to: "/website-studio", label: "Website Studio" },
+  { to: "/social-studio", label: "Social Studio" },
+  { to: "/content-calendar", label: "Content Calendar" },
+  { to: "/analytics", label: "Analytics" },
+  { to: "/advisor", label: "AI Advisor" },
 ] as const;
 
 export function SiteHeader() {
@@ -31,13 +42,25 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="col-span-2 flex flex-wrap items-center justify-center gap-x-1 gap-y-1 text-[13px] lg:col-span-1 lg:order-2">
+        <nav className="col-span-2 flex flex-nowrap items-center gap-x-1 overflow-x-auto text-[13px] lg:col-span-1 lg:order-2">
+          <span className="mr-1 flex shrink-0 items-center gap-1 text-[10px] font-semibold tracking-[0.18em] text-wine uppercase">
+            <Sparkles className="h-3 w-3" /> Grow
+          </span>
+          {GROW_NAV.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="shrink-0 rounded-full px-2.5 py-1 text-foreground/70 transition-colors hover:bg-rose hover:text-wine data-[status=active]:bg-rose data-[status=active]:text-wine"
+            >
+              {item.label}
+            </Link>
+          ))}
           {NAV.map((item) => (
             <Link
               key={item.to}
               to={item.to}
               activeOptions={{ exact: item.to === "/" }}
-              className="rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:text-wine data-[status=active]:bg-rose data-[status=active]:text-wine"
+              className="shrink-0 rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:text-wine data-[status=active]:bg-rose data-[status=active]:text-wine"
             >
               {item.label}
             </Link>
@@ -48,6 +71,12 @@ export function SiteHeader() {
           <button className="hidden items-center gap-1.5 rounded-full border border-clay/30 bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-wine/30 hover:text-wine sm:flex">
             <Globe className="h-3.5 w-3.5" /> English <ChevronDown className="h-3 w-3" />
           </button>
+          <Link
+            to="/login"
+            className="rounded-full border border-clay/30 bg-card px-3.5 py-2 text-xs font-medium text-foreground transition-colors hover:border-wine/30 hover:text-wine"
+          >
+            Login
+          </Link>
           <button className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5">
             <Mic className="h-3.5 w-3.5" /> Talk to Sakhi
           </button>
