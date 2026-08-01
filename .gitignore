@@ -34,3 +34,9 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Claude local settings
+.claude/settings.local.json
+
+# Supabase temp files
+supabase/.temp/

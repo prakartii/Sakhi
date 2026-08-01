@@ -1,0 +1,1 @@
+"""Sakhi backend application package."""
