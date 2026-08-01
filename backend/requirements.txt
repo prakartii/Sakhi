@@ -20,3 +20,11 @@ groq>=1.6.0,<2.0.0
 openai>=2.52.0,<3.0.0
 together>=2.28.0,<3.0.0
 sarvamai>=0.1.28,<0.2.0
+
+# --- Auth (verifies Supabase session tokens against Supabase's own
+# /auth/v1/user endpoint — no JWT signing scheme to keep in sync) ---
+httpx>=0.27.0,<0.29.0
+
+# --- Voice upload (FastAPI's Form/File/UploadFile need this to parse
+# multipart/form-data — see /voice/converse) ---
+python-multipart>=0.0.9,<0.1.0

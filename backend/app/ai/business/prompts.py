@@ -14,7 +14,7 @@ Respond with a single JSON object matching exactly this shape:
 {
   "name": string,
   "business_type": string,
-  "products": [{"name": string, "description": string, "price": number or null, "category": string or null}],
+  "products": [{"name": string, "description": string or null, "price": number or null, "category": string or null}],
   "target_audience": string,
   "location": string,
   "languages": [string],
@@ -32,7 +32,8 @@ Rules:
 - "business_type": a short category, e.g. "handmade accessories", \
   "home bakery", "tailoring".
 - "products": only products/services actually mentioned — never invent \
-  ones that weren't described. "price"/"category" are null if not stated.
+  ones that weren't described. "description"/"price"/"category" are null \
+  if not stated.
 - "target_audience": who they sell to, inferred from context if not \
   explicit — a short phrase, not a guess at exact demographics.
 - "location": city/region mentioned; empty string if genuinely none given.

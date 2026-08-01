@@ -2,19 +2,28 @@
 onboarding/growth-workflow fields (owner, description, stage, socials) and
 an onboarding-completion check.
 
-No authentication yet: user_id is supplied explicitly by the caller
-(request body on create, required query param on list) instead of being
-derived from a session. That's a deliberate, temporary gap — it goes away
-once auth is implemented, not an oversight.
+user_id is derived from the caller's verified Supabase session
+(get_current_app_user) rather than trusted from the request — create/list
+silently bind to the authenticated user regardless of what a client sends.
 """
 
 import uuid
+from collections import defaultdict
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_session
-from app.models.enums import BusinessStatus
+from app.ai.analytics.models import InventoryUsage, MetricsRows
+from app.ai.analytics.summarizer import summarize
+from app.ai.forecasting.schemas import RunRatePoint
+from app.ai.providers import AIProviderResponseError
+from app.api.deps import get_current_app_user, get_db_session
+from app.models.enums import BusinessStatus, TransactionType
+from app.models.user import User
+from app.repositories.inventory import InventoryRepository
+from app.repositories.transaction import TransactionRepository
+from app.schemas.analytics_summary import AISummaryResponse, TopActionOut
 from app.schemas.business_profile import (
     BusinessProfileCreate,
     BusinessProfileListResponse,
@@ -23,6 +32,7 @@ from app.schemas.business_profile import (
     BusinessProfileRead,
     BusinessProfileUpdate,
 )
+from app.services.ai_mapping import to_ai_business_profile
 from app.services.business_profile import (
     BusinessProfileConflictError,
     BusinessProfileNotFoundError,
@@ -51,9 +61,10 @@ def get_service(db: AsyncSession = Depends(get_db_session)) -> BusinessProfileSe
 )
 async def create_business_profile(
     payload: BusinessProfileCreate,
+    current_user: User = Depends(get_current_app_user),
     service: BusinessProfileService = Depends(get_service),
 ) -> BusinessProfileRead:
-    """Create a business profile for a user.
+    """Create a business profile for the authenticated user.
 
     `is_primary` defaults to true; a user may have at most one primary
     business profile (enforced by the database) — creating a second
@@ -63,6 +74,7 @@ async def create_business_profile(
     creation time; use PATCH or PUT to fill them in later, and
     GET .../onboarding-status to check what's still missing.
     """
+    payload.user_id = current_user.id
     try:
         return await service.create(payload)
     except BusinessProfileConflictError as exc:
@@ -77,21 +89,17 @@ async def create_business_profile(
     summary="List a user's business profiles",
 )
 async def list_business_profiles(
-    user_id: uuid.UUID = Query(
-        ...,
-        description="Owning user id (temporary — replaced by session-derived "
-        "scoping once auth exists).",
-    ),
     status_filter: BusinessStatus | None = Query(
         None, alias="status", description="Filter by lifecycle status."
     ),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    current_user: User = Depends(get_current_app_user),
     service: BusinessProfileService = Depends(get_service),
 ) -> BusinessProfileListResponse:
-    """List business profiles owned by a given user, newest first."""
+    """List business profiles owned by the authenticated user, newest first."""
     items, total = await service.list(
-        user_id, status=status_filter, limit=limit, offset=offset
+        current_user.id, status=status_filter, limit=limit, offset=offset
     )
     return BusinessProfileListResponse(
         items=items, total=total, limit=limit, offset=offset
@@ -138,6 +146,68 @@ async def get_business_profile_onboarding_status(
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, "Business profile not found."
         ) from exc
+
+
+@router.get(
+    "/{business_profile_id}/ai-summary",
+    response_model=AISummaryResponse,
+    summary="AI-narrated summary of recent revenue and stock-risk facts",
+    responses={
+        404: {"description": "Business profile not found"},
+        503: {"description": "AI provider unavailable"},
+    },
+)
+async def get_business_profile_ai_summary(
+    business_profile_id: uuid.UUID,
+    current_user: User = Depends(get_current_app_user),
+    service: BusinessProfileService = Depends(get_service),
+    db: AsyncSession = Depends(get_db_session),
+) -> AISummaryResponse:
+    """Aggregates real transactions/inventory for this business (no
+    fabricated numbers — see app.ai.analytics.facts, which falls back to
+    an honest "not enough data yet" fact when history is sparse) and asks
+    the configured AI provider to narrate it, the same way
+    app.ai.analytics.summarizer is designed to be used everywhere else."""
+    try:
+        profile = await service.get(business_profile_id)
+    except BusinessProfileNotFoundError as exc:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "Business profile not found."
+        ) from exc
+    if profile.user_id != current_user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Business profile not found.")
+
+    transactions_repo = TransactionRepository(db)
+    income, _ = await transactions_repo.list_by_business_profile(
+        business_profile_id, transaction_type=TransactionType.INCOME, limit=200
+    )
+    weekly_totals: dict[date, float] = defaultdict(float)
+    for txn in income:
+        week_start = txn.transaction_date - timedelta(days=txn.transaction_date.weekday())
+        weekly_totals[week_start] += float(txn.amount)
+    revenue_by_period = [
+        RunRatePoint(period_start=week, value=total)
+        for week, total in sorted(weekly_totals.items())
+    ]
+
+    inventory_repo = InventoryRepository(db)
+    low_stock, _ = await inventory_repo.list_low_stock(business_profile_id, limit=5)
+    inventory_usage = [
+        InventoryUsage(item_name=item.item_name, current_quantity=float(item.current_quantity))
+        for item in low_stock
+    ]
+
+    metrics = MetricsRows(revenue_by_period=revenue_by_period, inventory_usage=inventory_usage)
+    try:
+        summary = await summarize(to_ai_business_profile(profile), metrics)
+    except AIProviderResponseError as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+
+    return AISummaryResponse(
+        narrative=summary.narrative,
+        highlights=summary.highlights,
+        top_actions=[TopActionOut(action=a.action, why=a.why) for a in summary.top_actions],
+    )
 
 
 @router.patch(

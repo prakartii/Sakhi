@@ -1,6 +1,10 @@
 import { useState, type SyntheticEvent } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+import { RequireAuth, RequireBusinessProfile } from "@/components/sakhi/RouteGuards";
+import { useInvalidateBusinessProfiles } from "@/hooks/use-business-profile";
+import { api, ApiError } from "@/lib/api-client";
 import {
   ArrowLeft,
   ArrowRight,
@@ -44,8 +48,18 @@ export const Route = createFileRoute("/business-setup")({
       },
     ],
   }),
-  component: BusinessSetup,
+  component: BusinessSetupRoute,
 });
+
+function BusinessSetupRoute() {
+  return (
+    <RequireAuth>
+      <RequireBusinessProfile redirectWhen="present" redirectTo="/dashboard">
+        <BusinessSetup />
+      </RequireBusinessProfile>
+    </RequireAuth>
+  );
+}
 
 const STORY_PROMPTS = [
   "I crochet bags.",
@@ -115,6 +129,8 @@ const PERSONALITIES = ["Warm", "Earthy", "Playful", "Minimal", "Festive", "Artis
 const PALETTE: JournalTone[] = ["rose", "leaf", "marigold", "indigo", "lilac", "sand"];
 
 function BusinessSetup() {
+  const navigate = useNavigate();
+  const invalidateBusinessProfiles = useInvalidateBusinessProfiles();
   const [step, setStep] = useState(0);
   const [story, setStory] = useState("");
   const [products, setProducts] = useState(SAMPLE_PRODUCTS);
@@ -125,6 +141,7 @@ function BusinessSetup() {
   const [personality, setPersonality] = useState<string[]>(["Warm", "Earthy"]);
   const [palette, setPalette] = useState<JournalTone>("rose");
   const [newProduct, setNewProduct] = useState("");
+  const [creating, setCreating] = useState(false);
 
   function toggle(list: string[], setList: (v: string[]) => void, value: string) {
     setList(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -149,8 +166,38 @@ function BusinessSetup() {
     toast.success("Product pinned to your board");
   }
 
-  function handleFinish() {
-    toast.success(`${businessName || "Your business"} is set up — welcome to Sakhi!`);
+  async function handleFinish() {
+    const parts = [
+      story.trim(),
+      businessName.trim() && `The business is called ${businessName.trim()}.`,
+      tagline.trim() && `Tagline: ${tagline.trim()}.`,
+      products.length > 0 &&
+        `Products: ${products.map((p) => `${p.name} (${p.category})`).join(", ")}.`,
+      customers.length > 0 && `Sells mainly to: ${customers.join(", ")}.`,
+      goals.length > 0 && `Goals: ${goals.join(", ")}.`,
+      personality.length > 0 && `Brand personality: ${personality.join(", ")}.`,
+    ].filter(Boolean);
+    const text = parts.join(" ");
+
+    if (!text.trim()) {
+      toast.error("Tell Sakhi a little about your business first.");
+      setStep(0);
+      return;
+    }
+
+    setCreating(true);
+    try {
+      await api.post("/onboarding", { text });
+      await invalidateBusinessProfiles();
+      toast.success(`${businessName || "Your business"} is set up — welcome to Sakhi!`);
+      navigate({ to: "/dashboard" });
+    } catch (error) {
+      const message =
+        error instanceof ApiError ? error.message : "Couldn't set up your business — try again.";
+      toast.error(message);
+    } finally {
+      setCreating(false);
+    }
   }
 
   return (
@@ -406,10 +453,20 @@ function BusinessSetup() {
                 <button
                   type="button"
                   onClick={handleFinish}
-                  className="group flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-[13.5px] font-semibold text-primary-foreground shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
+                  disabled={creating}
+                  className="group flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-[13.5px] font-semibold text-primary-foreground shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-70"
                 >
-                  Create my business
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  {creating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Setting up your business…
+                    </>
+                  ) : (
+                    <>
+                      Create my business
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                    </>
+                  )}
                 </button>
               )}
             </div>

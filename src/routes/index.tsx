@@ -13,6 +13,7 @@ import {
 import { FeaturedMetric, NoteMetric, TicketMetric } from "@/components/sakhi/CompanionMetrics";
 import { MorningBriefing, type BriefingTask } from "@/components/sakhi/CompanionBriefing";
 import { Action, Basis, Craft, Eyebrow, Why } from "@/components/sakhi/Cards";
+import { useVoiceCompanion } from "@/hooks/use-voice-companion";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -61,7 +62,46 @@ const TASKS: BriefingTask[] = [
   },
 ];
 
+const DEFAULT_QUOTE = "&ldquo;Aaj 12 dupatte beche, 3 hazaar ka kapda kharida.&rdquo;";
+
 function Companion() {
+  const voice = useVoiceCompanion();
+
+  const voiceCardProps = (() => {
+    switch (voice.state) {
+      case "recording":
+        return {
+          title: "Listening…",
+          quote: "Speak now — tap again when you're done.",
+          statusLabel: "Recording",
+        };
+      case "processing":
+        return {
+          title: "Thinking…",
+          quote: voice.result ? voice.result.transcript : "Sakhi is making sense of that.",
+          statusLabel: "Processing",
+        };
+      case "speaking":
+        return {
+          title: "Sakhi says…",
+          quote: voice.result?.answer ?? "",
+          statusLabel: "Speaking",
+        };
+      case "error":
+        return {
+          title: "Talk to Sakhi",
+          quote: voice.errorMessage ?? "Something went wrong — try again.",
+          statusLabel: "Tap to talk",
+        };
+      default:
+        return {
+          title: voice.result ? "Sakhi says…" : "Talk to Sakhi",
+          quote: voice.result?.answer ?? DEFAULT_QUOTE,
+          statusLabel: "Tap to talk",
+        };
+    }
+  })();
+
   return (
     <Page>
       {/* ---------- Hero : memory wall ---------- */}
@@ -124,10 +164,12 @@ function Companion() {
               </StatusPill>
 
               <VoiceCard
-                title="Talk to Sakhi"
-                quote="&ldquo;Aaj 12 dupatte beche, 3 hazaar ka kapda kharida.&rdquo;"
+                {...voiceCardProps}
                 languages="हिंदी · বাংলা · தமிழ் · తెలుగు · मराठी · ગુજરાતી · ಕನ್ನಡ"
                 className="relative z-10"
+                isRecording={voice.isRecording}
+                isBusy={voice.isBusy}
+                onMicClick={voice.isRecording ? voice.stopRecording : voice.startRecording}
               />
 
               <StatusPill

@@ -11,9 +11,17 @@ import {
   Users2,
 } from "lucide-react";
 import { Page } from "@/components/sakhi/Layout";
+import { RequireAuth, RequireBusinessProfile } from "@/components/sakhi/RouteGuards";
+import {
+  useAISummary,
+  useInventorySummary,
+  useNotifications,
+  useScheduledPostsQueue,
+} from "@/hooks/use-dashboard-data";
+import { usePrimaryBusinessProfile } from "@/hooks/use-business-profile";
 import { MicPanel } from "@/components/sakhi/MicPanel";
 import { Reveal } from "@/components/sakhi/Reveal";
-import { Action, Basis, Craft, Eyebrow, HandNote, Pill, Why } from "@/components/sakhi/Cards";
+import { Basis, Craft, Eyebrow, HandNote, Pill, Why } from "@/components/sakhi/Cards";
 import { BotanicalMark } from "@/components/sakhi/CompanionAssets";
 import {
   FocusChip,
@@ -23,10 +31,8 @@ import {
 } from "@/components/sakhi/DashboardAssets";
 import {
   BrandStamp,
-  ChecklistNote,
   HashtagNote,
   InstagramPreviewMini,
-  ReelPreview,
   TornStat,
 } from "@/components/sakhi/ScrapbookAssets";
 
@@ -41,8 +47,18 @@ export const Route = createFileRoute("/dashboard")({
       },
     ],
   }),
-  component: Dashboard,
+  component: DashboardRoute,
 });
+
+function DashboardRoute() {
+  return (
+    <RequireAuth>
+      <RequireBusinessProfile redirectWhen="missing" redirectTo="/business-setup">
+        <Dashboard />
+      </RequireBusinessProfile>
+    </RequireAuth>
+  );
+}
 
 const FOCUS = [
   {
@@ -74,46 +90,6 @@ const FOCUS = [
     tone: "lilac" as const,
     label: "Scheme recommendation",
     note: "PM Vishwakarma toolkit grant — 92% fit for you.",
-  },
-];
-
-const SNAPSHOT = [
-  { label: "Today's sales", value: "₹6,480", note: "4 orders · ₹1,620 avg" },
-  { label: "Weekly revenue", value: "₹34,200", note: "+18% vs last week" },
-  { label: "Pending payments", value: "₹12,900", note: "2 buyers, one 21 days overdue" },
-  { label: "Orders completed", value: "112", note: "9 this week" },
-  { label: "Inventory health", value: "62%", meter: 62, note: "Indigo fabric needs reordering" },
-  { label: "Customer happiness", value: "91%", meter: 91, note: "From 19 voice check-ins" },
-];
-
-const SUGGESTIONS = [
-  {
-    title: "Raise crochet bag price by ₹50",
-    why: "Your margin on this piece has stayed flat for 3 months while cotton yarn cost rose 12% — buyers haven't blinked at your last two increases.",
-    impact: { text: "+₹2,100/month", tone: "leaf" as const },
-    confidence: { text: "High confidence", tone: "indigo" as const },
-    action: "Update the price",
-  },
-  {
-    title: "Launch Rakhi collection next week",
-    why: "Last year, 61% of Rakhi buyers ordered two pieces together the moment the collection went live — waiting until the week-of cost you orders.",
-    impact: { text: "Est. ₹14,000 over the fortnight", tone: "marigold" as const },
-    confidence: { text: "High confidence", tone: "indigo" as const },
-    action: "Draft the collection",
-  },
-  {
-    title: "Create a behind-the-scenes reel tomorrow",
-    why: "Your last process video outperformed product photos 3-to-1 on saves — followers want to see the loom, not just the result.",
-    impact: { text: "+400–600 reach", tone: "rose" as const },
-    confidence: { text: "Medium confidence", tone: "marigold" as const },
-    action: "Plan the reel",
-  },
-  {
-    title: "Restock indigo fabric this week",
-    why: "You're 8 days from running out, and this dyer's last two lead times ran 9 and 11 days — ordering today just clears it.",
-    impact: { text: "Avoids ₹9,000 in slipped orders", tone: "rose" as const },
-    confidence: { text: "High confidence", tone: "indigo" as const },
-    action: "Reorder now",
   },
 ];
 
@@ -164,6 +140,43 @@ const OPPORTUNITIES = [
 ];
 
 function Dashboard() {
+  const { profile } = usePrimaryBusinessProfile();
+  const inventorySummary = useInventorySummary();
+  const notifications = useNotifications();
+  const scheduledPosts = useScheduledPostsQueue();
+  const aiSummary = useAISummary();
+
+  const SNAPSHOT = [
+    {
+      label: "Stock value",
+      value: inventorySummary.data ? `₹${inventorySummary.data.total_stock_value.toLocaleString("en-IN")}` : "—",
+      note: inventorySummary.data ? `${inventorySummary.data.total_products} products tracked` : "Loading…",
+    },
+    {
+      label: "Low stock alerts",
+      value: inventorySummary.data ? String(inventorySummary.data.low_stock_count) : "—",
+      note: inventorySummary.data?.out_of_stock_count
+        ? `${inventorySummary.data.out_of_stock_count} out of stock`
+        : "Nothing critical",
+      ...(inventorySummary.data
+        ? { meter: Math.max(0, 100 - inventorySummary.data.low_stock_count * 20) }
+        : {}),
+    },
+    {
+      label: "Unread notifications",
+      value: notifications.data ? String(notifications.data.total) : "—",
+      note:
+        (notifications.data && notifications.data.total > 0
+          ? notifications.data.items[0]?.title
+          : undefined) ?? "You're all caught up",
+    },
+    {
+      label: "Posts in queue",
+      value: scheduledPosts.data ? String(scheduledPosts.data.total) : "—",
+      note: "Scheduled via Content Calendar",
+    },
+  ];
+
   return (
     <Page>
       <section className="relative py-14 lg:py-16">
@@ -184,15 +197,14 @@ function Dashboard() {
 
         <Reveal delay={90} className="mt-8">
           <GreetingCard
-            time="7:10 AM"
-            place="Jaipur"
-            name="Kavita"
+            time={new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}
+            place={profile?.city ?? "your city"}
+            name={profile?.owner_name ?? profile?.business_name ?? "there"}
             summary={
-              <>
-                Yesterday was productive — three dupatta orders were completed, one customer
-                requested custom embroidery, and Rakhi demand is beginning to rise. Here's what
-                deserves your attention today.
-              </>
+              aiSummary.data?.narrative ??
+              (aiSummary.isLoading
+                ? "Loading today's summary…"
+                : "Log a voice check-in or add a transaction so Sakhi has something to summarize.")
             }
           />
         </Reveal>
@@ -241,36 +253,46 @@ function Dashboard() {
           <BrandStamp className="hidden sm:grid" />
         </Reveal>
         <div className="mt-6 grid gap-5 lg:grid-cols-2">
-          {SUGGESTIONS.map((s, i) => (
-            <Reveal key={s.title} delay={i * 80}>
-              <Craft tone={i % 2 === 0 ? "rose" : "marigold"} texture={i % 2 === 0 ? "weave" : "blockprint"} className="h-full">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <Eyebrow>Suggestion</Eyebrow>
-                    <h3 className="font-display mt-2 text-xl font-semibold">{s.title}</h3>
-                  </div>
-                  {i === 1 ? (
-                    <ChecklistNote
-                      title="Rakhi Collection ♡"
-                      items={["Soft pastels + gold accents", "Reels + behind the scenes", "Launch: next week"]}
-                      className="hidden shrink-0 sm:block"
-                    />
-                  ) : null}
-                  {i === 2 ? (
-                    <ReelPreview caption="From our hands to your hearts" className="hidden shrink-0 sm:block" />
-                  ) : null}
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Pill tone={s.impact.tone}>{s.impact.text}</Pill>
-                  <Pill tone={s.confidence.tone}>{s.confidence.text}</Pill>
-                  {i === 2 ? <TornStat label="Best time to post" value="7:30 PM" rotate={-1} /> : null}
-                </div>
-                <Why>{s.why}</Why>
-                <Basis />
-                <Action>{s.action}</Action>
+          {aiSummary.isLoading ? (
+            <Reveal>
+              <Craft tone="rose" texture="weave" className="h-full">
+                <Eyebrow>Suggestion</Eyebrow>
+                <h3 className="font-display mt-2 text-xl font-semibold">Reading your numbers…</h3>
+                <Why>Sakhi is looking at your recent transactions and stock levels.</Why>
               </Craft>
             </Reveal>
-          ))}
+          ) : aiSummary.isError || !aiSummary.data?.top_actions.length ? (
+            <Reveal>
+              <Craft tone="rose" texture="weave" className="h-full">
+                <Eyebrow>Suggestion</Eyebrow>
+                <h3 className="font-display mt-2 text-xl font-semibold">Not enough data yet</h3>
+                <Why>
+                  Log a few transactions or a voice check-in and Sakhi will start suggesting
+                  concrete next steps here.
+                </Why>
+              </Craft>
+            </Reveal>
+          ) : (
+            aiSummary.data.top_actions.map((action, i) => (
+              <Reveal key={action.action} delay={i * 80}>
+                <Craft
+                  tone={i % 2 === 0 ? "rose" : "marigold"}
+                  texture={i % 2 === 0 ? "weave" : "blockprint"}
+                  className="h-full"
+                >
+                  <Eyebrow>Suggestion</Eyebrow>
+                  <h3 className="font-display mt-2 text-xl font-semibold">{action.action}</h3>
+                  {aiSummary.data!.highlights[i] ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Pill tone="indigo">{aiSummary.data!.highlights[i]}</Pill>
+                    </div>
+                  ) : null}
+                  <Why>{action.why}</Why>
+                  <Basis>Based on your recent transactions and stock levels.</Basis>
+                </Craft>
+              </Reveal>
+            ))
+          )}
         </div>
       </section>
 

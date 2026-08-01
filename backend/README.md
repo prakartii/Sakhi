@@ -150,6 +150,8 @@ pip install -r requirements-dev.txt
 cp .env.example .env            # then fill in DATABASE_URL etc. (same values as the repo-root .env)
 
 uvicorn app.main:app --reload   # http://localhost:8000/health
+# On Windows, use `python run_dev.py` instead — uvicorn's default event
+# loop there is incompatible with psycopg 3's async driver (see run_dev.py).
 ```
 
 ## Tests

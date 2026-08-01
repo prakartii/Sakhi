@@ -17,12 +17,16 @@ from app.api.v1.endpoints import (
     brand_assets,
     business_profiles,
     content_calendar_items,
+    content_generation,
     inventory,
     marketing_analytics_snapshots,
     notifications,
+    onboarding,
     scheduled_posts,
     social_media_connections,
     transactions,
+    voice,
+    website_generation,
     websites,
 )
 
@@ -35,6 +39,12 @@ api_router.include_router(
 )
 
 api_router.include_router(
+    onboarding.router,
+    prefix="/onboarding",
+    tags=["onboarding"],
+)
+
+api_router.include_router(
     brand_assets.router,
     prefix="/brand-assets",
     tags=["brand-assets"],
@@ -44,6 +54,12 @@ api_router.include_router(
     websites.router,
     prefix="/websites",
     tags=["websites"],
+)
+
+api_router.include_router(
+    website_generation.router,
+    prefix="/websites",
+    tags=["websites", "website-ai"],
 )
 
 api_router.include_router(
@@ -77,6 +93,12 @@ api_router.include_router(
 )
 
 api_router.include_router(
+    content_generation.router,
+    prefix="/content-calendar",
+    tags=["content-calendar", "content-ai"],
+)
+
+api_router.include_router(
     scheduled_posts.router,
     prefix="/scheduled-posts",
     tags=["scheduled-posts"],
@@ -86,4 +108,10 @@ api_router.include_router(
     marketing_analytics_snapshots.router,
     prefix="/marketing-analytics",
     tags=["marketing-analytics"],
+)
+
+api_router.include_router(
+    voice.router,
+    prefix="/voice",
+    tags=["voice"],
 )

@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 class Product(BaseModel):
     name: str
-    description: str
+    description: str | None = None
     price: float | None = None
     category: str | None = None
 

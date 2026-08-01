@@ -13,7 +13,9 @@ app/repositories/) — that coupling lives here instead.
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.supabase_auth import CurrentUser, get_current_user
 from app.db.session import get_db as get_db_session
+from app.models.user import User
 from app.repositories.brand_asset import BrandAssetRepository
 from app.repositories.business_memory import BusinessMemoryRepository
 from app.repositories.business_profile import BusinessProfileRepository
@@ -35,9 +37,12 @@ from app.repositories.transaction import TransactionRepository
 from app.repositories.voice_log import VoiceLogRepository
 from app.repositories.website import WebsiteRepository
 from app.repositories.website_version import WebsiteVersionRepository
+from app.services.user import UserService
 
 __all__ = [
     "get_db_session",
+    "get_current_user",
+    "get_current_app_user",
     "get_business_profile_repository",
     "get_brand_asset_repository",
     "get_website_repository",
@@ -58,6 +63,17 @@ __all__ = [
     "get_scheduled_post_repository",
     "get_marketing_analytics_snapshot_repository",
 ]
+
+
+async def get_current_app_user(
+    current: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> User:
+    """Verified Supabase identity, mirrored into public.users if this is the
+    first request seen for that id. Use this (instead of get_current_user)
+    wherever an endpoint needs a real users.id foreign key, not just proof
+    of a valid session."""
+    return await UserService(db).ensure_local_user(current)
 
 
 def get_business_profile_repository(

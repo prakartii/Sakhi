@@ -124,11 +124,19 @@ export function VoiceCard({
   quote,
   languages,
   className,
+  onMicClick,
+  isRecording = false,
+  isBusy = false,
+  statusLabel,
 }: {
   title: string;
   quote: string;
   languages?: string;
   className?: string;
+  onMicClick?: () => void;
+  isRecording?: boolean;
+  isBusy?: boolean;
+  statusLabel?: string;
 }) {
   return (
     <div className={cn("relative", className)}>
@@ -163,14 +171,21 @@ export function VoiceCard({
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-wine" />
           </span>
           <p className="text-[10px] font-semibold tracking-[0.24em] text-muted-foreground uppercase">
-            Listening
+            {statusLabel ?? "Listening"}
           </p>
         </div>
 
         <button
+          type="button"
           aria-label={title}
-          className="relative mx-auto mt-6 grid h-[4.75rem] w-[4.75rem] place-items-center rounded-full bg-primary text-primary-foreground ring-4 ring-card ring-offset-2 ring-offset-wine/10 transition-transform hover:scale-105"
-          style={{ animation: "halo 2.6s ease-out infinite" }}
+          aria-pressed={isRecording}
+          onClick={onMicClick}
+          disabled={isBusy}
+          className={cn(
+            "relative mx-auto mt-6 grid h-[4.75rem] w-[4.75rem] place-items-center rounded-full text-primary-foreground ring-4 ring-card ring-offset-2 transition-transform hover:scale-105 disabled:pointer-events-none disabled:opacity-70",
+            isRecording ? "bg-wine ring-offset-wine/30" : "bg-primary ring-offset-wine/10",
+          )}
+          style={{ animation: isBusy ? undefined : "halo 2.6s ease-out infinite" }}
         >
           <Mic className="h-6 w-6" />
         </button>
@@ -182,7 +197,10 @@ export function VoiceCard({
               className="w-[3px] origin-bottom rounded-full bg-wine/60"
               style={{
                 height: `${h * 24}px`,
-                animation: `wave ${900 + i * 130}ms ease-in-out ${i * 70}ms infinite`,
+                animation: isRecording
+                  ? `wave ${900 + i * 130}ms ease-in-out ${i * 70}ms infinite`
+                  : "none",
+                opacity: isRecording ? 1 : 0.35,
               }}
             />
           ))}

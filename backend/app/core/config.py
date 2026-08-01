@@ -6,14 +6,28 @@ surfacing as a confusing error on the first request.
 """
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# ``env_file=".env"`` alone resolves relative to the process's current working
+# directory, so it silently finds nothing (or the wrong file) depending on
+# whether the app is started from the repo root or from backend/. Resolve
+# both candidate locations from this file's own path instead, so startup is
+# independent of cwd. Later paths override earlier ones for the same key, so
+# a backend/.env (used by docker-compose) takes precedence over the repo
+# root .env when both exist; pydantic-settings silently skips files that
+# don't exist, so listing both is safe even if only one is present.
+_BACKEND_DIR = Path(__file__).resolve().parents[2]
+_REPO_ROOT = _BACKEND_DIR.parent
+_ENV_FILES = (_REPO_ROOT / ".env", _BACKEND_DIR / ".env")
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_FILES,
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
@@ -27,7 +41,19 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # --- CORS ---
-    CORS_ORIGINS: list[str] = ["http://localhost:5173"]
+    # Vite's dev server (via @lovable.dev/vite-tanstack-config's sandbox
+    # port detection) falls back through 8080/8081/8082/... whenever the
+    # preceding port is already taken, so localhost:5173 alone isn't
+    # reliable for local dev — list the common fallbacks it actually lands
+    # on instead of guessing one.
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:5173",
+        "http://localhost:8080",
+        "http://localhost:8081",
+        "http://localhost:8082",
+        "http://localhost:8083",
+        "http://localhost:3000",
+    ]
 
     # --- Database (Supabase Postgres) ---
     DATABASE_URL: str
@@ -85,7 +111,10 @@ class Settings(BaseSettings):
     SARVAM_API_KEY: str | None = None
     SARVAM_STT_MODEL: str = "saaras:v3"
     SARVAM_TTS_MODEL: str = "bulbul:v3"
-    SARVAM_TTS_SPEAKER: str = "anushka"
+    # "anushka" (a common Sarvam example speaker) is not in bulbul:v3's
+    # speaker list — confirmed against the live API, which 400s on it.
+    # "priya" is a valid bulbul:v3 speaker.
+    SARVAM_TTS_SPEAKER: str = "priya"
     SARVAM_TIMEOUT_SECONDS: float = 15.0
     # Optional pivot: translate to English before Groq, then back before
     # TTS, for languages where Groq's own multilingual output is weak.
@@ -106,6 +135,22 @@ class Settings(BaseSettings):
         if url.startswith("postgresql://"):
             return "postgresql+psycopg://" + url[len("postgresql://") :]
         return url
+
+    @property
+    def supabase_project_url(self) -> str | None:
+        """SUPABASE_URL normalized to the bare project origin.
+
+        The value in .env already has a `/rest/v1/` suffix baked in (a
+        PostgREST base URL, not a project URL), so anything that needs a
+        different Supabase API family — auth's `/auth/v1/...`, storage's
+        `/storage/v1/...` — must not just string-concatenate onto it or it
+        ends up with both suffixes stacked. Scheme + host is the only part
+        guaranteed stable across API families.
+        """
+        if not self.SUPABASE_URL:
+            return None
+        parts = urlsplit(self.SUPABASE_URL)
+        return f"{parts.scheme}://{parts.netloc}"
 
 
 @lru_cache

@@ -1,5 +1,5 @@
 import { useState, type SyntheticEvent } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   ArrowRight,
@@ -7,6 +7,7 @@ import {
   Brain,
   Globe,
   Loader2,
+  Mail,
   Mic,
   ShieldCheck,
   User,
@@ -23,6 +24,7 @@ import {
   PasswordField,
   RememberMe,
 } from "@/components/sakhi/Auth";
+import { supabase } from "@/lib/supabase-client";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -39,13 +41,17 @@ export const Route = createFileRoute("/login")({
 
 type Mode = "login" | "signup";
 
-type Errors = Partial<Record<"name" | "mobile" | "password" | "confirm", string>>;
+type Errors = Partial<Record<"name" | "email" | "mobile" | "password" | "confirm", string>>;
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function LoginPage() {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>("login");
   const [language, setLanguage] = useState("en");
   const [countryCode, setCountryCode] = useState("IN");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -63,7 +69,10 @@ function LoginPage() {
     if (mode === "signup" && name.trim().length < 2) {
       next.name = "Enter your full name";
     }
-    if (mobile.length < 7) {
+    if (!EMAIL_PATTERN.test(email)) {
+      next.email = "Enter a valid email address";
+    }
+    if (mode === "signup" && mobile.length < 7) {
       next.mobile = "Enter a valid mobile number";
     }
     if (password.length < 6) {
@@ -75,17 +84,49 @@ function LoginPage() {
     return next;
   }
 
-  function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
+  async function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     const next = validate();
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
     setSubmitting(true);
-    setTimeout(() => {
+    try {
+      if (mode === "login") {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+        toast.success("Welcome back to Sakhi!");
+        navigate({ to: "/dashboard" });
+      } else {
+        const dial = countryCode === "IN" ? "+91" : "";
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: name, phone: `${dial}${mobile}` },
+          },
+        });
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+        if (!data.session) {
+          // Email confirmation is required before a session is issued —
+          // Supabase's default project setting. Nothing more to do here
+          // client-side until the user clicks the link in that email.
+          toast.success("Account created — check your email to confirm it, then log in.");
+          switchMode("login");
+          return;
+        }
+        toast.success("Account created — welcome to Sakhi!");
+        navigate({ to: "/dashboard" });
+      }
+    } finally {
       setSubmitting(false);
-      toast.success(mode === "login" ? "Welcome back to Sakhi!" : "Account created — welcome to Sakhi!");
-    }, 700);
+    }
   }
 
   return (
@@ -177,13 +218,27 @@ function LoginPage() {
               />
             )}
 
-            <MobileField
-              value={mobile}
-              onChange={setMobile}
-              countryCode={countryCode}
-              onCountryCodeChange={setCountryCode}
-              error={errors.mobile}
+            <LabeledInput
+              label="Email"
+              icon={Mail}
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              autoFocus={mode === "login"}
+              error={errors.email}
             />
+
+            {mode === "signup" && (
+              <MobileField
+                value={mobile}
+                onChange={setMobile}
+                countryCode={countryCode}
+                onCountryCodeChange={setCountryCode}
+                error={errors.mobile}
+              />
+            )}
 
             <PasswordField
               value={password}

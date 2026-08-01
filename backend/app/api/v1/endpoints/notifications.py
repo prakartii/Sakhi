@@ -1,10 +1,8 @@
 """Notification CRUD + read-state endpoints.
 
-No authentication yet: user_id is supplied explicitly by the caller (request
-body on create, required query param on list/mark-all-read) instead of
-being derived from a session — the same deliberate, temporary gap already
-documented on the Business Profile, Brand Assets, Website, and Transaction
-endpoints.
+user_id is derived from the caller's verified Supabase session
+(get_current_app_user) for create/list/mark-all-read — a client can never
+read or write another user's notifications through this router.
 
 Covers System Notifications, Business Alerts, Finance Alerts, and Inventory
 Alerts via the existing `notification_type` values (system, cashflow_alert,
@@ -20,8 +18,9 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db_session
+from app.api.deps import get_current_app_user, get_db_session
 from app.models.enums import NotificationType
+from app.models.user import User
 from app.schemas.notification import (
     MarkAllReadResponse,
     NotificationCreate,
@@ -56,11 +55,13 @@ def get_service(db: AsyncSession = Depends(get_db_session)) -> NotificationServi
 )
 async def create_notification(
     payload: NotificationCreate,
+    current_user: User = Depends(get_current_app_user),
     service: NotificationService = Depends(get_service),
 ) -> NotificationRead:
-    """Create a notification for a user — system notification, business
-    alert, finance alert, or inventory alert, selected via
-    `notification_type`. Always created on the in-app channel."""
+    """Create a notification for the authenticated user — system
+    notification, business alert, finance alert, or inventory alert,
+    selected via `notification_type`. Always created on the in-app channel."""
+    payload.user_id = current_user.id
     try:
         return await service.create(payload)
     except InvalidReferenceError as exc:
@@ -73,11 +74,6 @@ async def create_notification(
     summary="List a user's notifications",
 )
 async def list_notifications(
-    user_id: uuid.UUID = Query(
-        ...,
-        description="Recipient user id (temporary — replaced by session-derived "
-        "scoping once auth exists).",
-    ),
     business_profile_id: uuid.UUID | None = Query(
         None, description="Filter to notifications about one business."
     ),
@@ -89,11 +85,12 @@ async def list_notifications(
     ),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    current_user: User = Depends(get_current_app_user),
     service: NotificationService = Depends(get_service),
 ) -> NotificationListResponse:
-    """List a user's notifications, most recent first."""
+    """List the authenticated user's notifications, most recent first."""
     items, total = await service.list(
-        user_id,
+        current_user.id,
         business_profile_id=business_profile_id,
         notification_type=notification_type,
         status=status_filter,
@@ -116,10 +113,10 @@ async def list_notifications(
     summary="Mark all of a user's notifications as read",
 )
 async def mark_all_notifications_read(
-    user_id: uuid.UUID = Query(..., description="Recipient user id."),
+    current_user: User = Depends(get_current_app_user),
     service: NotificationService = Depends(get_service),
 ) -> MarkAllReadResponse:
-    updated_count = await service.mark_all_read(user_id)
+    updated_count = await service.mark_all_read(current_user.id)
     return MarkAllReadResponse(updated_count=updated_count)
 
 
