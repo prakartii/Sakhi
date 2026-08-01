@@ -1,7 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "Artifact"
+      "Artifact",
+      "Bash(python -m venv .venv)",
+      "Bash(./.venv/Scripts/python.exe -m pip install --quiet --upgrade pip)",
+      "Bash(./.venv/Scripts/python.exe -m pip install --quiet -r requirements-dev.txt)",
+      "Bash(./.venv/Scripts/python.exe -m pytest -v)",
+      "Bash(awk '/^DATABASE_URL/{print length\\($0\\)}' .env)",
+      "Bash(sed -i 's|^DATABASE_URL=.*|DATABASE_URL=postgresql://postgres:placeholder@localhost:5432/postgres|' .env)",
+      "Bash(awk -F= '{print $1\"=\"\\(length\\($0\\)>length\\($1\\)+1 ? \"<set>\" : \"<empty>\"\\)}' .env)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check app tests)",
+      "Bash(./.venv/Scripts/python.exe -c ' *)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/models -v)",
+      "Bash(./.venv/Scripts/python.exe -m pytest)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check app tests alembic)",
+      "Bash(./.venv/Scripts/python.exe -m ruff format --check app tests alembic)",
+      "Bash(./.venv/Scripts/python.exe -m ruff format app tests alembic)",
+      "Bash(./.venv/Scripts/python.exe -m ruff format app tests)",
+      "Bash(./.venv/Scripts/python.exe -m pytest -q)",
+      "Bash(./.venv/Scripts/python.exe -m ruff check app tests --fix)"
     ]
   }
 }

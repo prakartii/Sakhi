@@ -1,11 +1,140 @@
 """Shared FastAPI dependencies, imported by routers as `Depends(...)`.
 
-Routers should import from here rather than reaching into app.db.session
-directly, so the DI surface stays stable even if the underlying session
-implementation changes. Future shared dependencies (current-user resolution,
-pagination params, etc.) are added here as they're needed.
+Routers should import from here rather than reaching into app.db.session or
+app.repositories directly, so the DI surface stays stable even if the
+underlying session/repository construction changes. Each get_*_repository
+below is a thin factory over the request-scoped AsyncSession — routers or
+services can `Depends()` on a repository directly, and tests can override
+any single one via app.dependency_overrides without touching the rest.
+Repository modules themselves stay framework-agnostic (no FastAPI import in
+app/repositories/) — that coupling lives here instead.
 """
 
-from app.db.session import get_db as get_db_session
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-__all__ = ["get_db_session"]
+from app.db.session import get_db as get_db_session
+from app.repositories.brand_asset import BrandAssetRepository
+from app.repositories.business_memory import BusinessMemoryRepository
+from app.repositories.business_profile import BusinessProfileRepository
+from app.repositories.conversation_history import ConversationHistoryRepository
+from app.repositories.government_scheme import GovernmentSchemeRepository
+from app.repositories.inventory import InventoryRepository
+from app.repositories.inventory_movement import InventoryMovementRepository
+from app.repositories.mentor import MentorRepository
+from app.repositories.notification import NotificationRepository
+from app.repositories.opportunity import OpportunityRepository
+from app.repositories.supplier import SupplierRepository
+from app.repositories.transaction import TransactionRepository
+from app.repositories.voice_log import VoiceLogRepository
+from app.repositories.website import WebsiteRepository
+from app.repositories.website_version import WebsiteVersionRepository
+
+__all__ = [
+    "get_db_session",
+    "get_business_profile_repository",
+    "get_brand_asset_repository",
+    "get_website_repository",
+    "get_website_version_repository",
+    "get_transaction_repository",
+    "get_inventory_repository",
+    "get_inventory_movement_repository",
+    "get_supplier_repository",
+    "get_voice_log_repository",
+    "get_conversation_history_repository",
+    "get_business_memory_repository",
+    "get_government_scheme_repository",
+    "get_opportunity_repository",
+    "get_mentor_repository",
+    "get_notification_repository",
+]
+
+
+def get_business_profile_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> BusinessProfileRepository:
+    return BusinessProfileRepository(db)
+
+
+def get_brand_asset_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> BrandAssetRepository:
+    return BrandAssetRepository(db)
+
+
+def get_website_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> WebsiteRepository:
+    return WebsiteRepository(db)
+
+
+def get_website_version_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> WebsiteVersionRepository:
+    return WebsiteVersionRepository(db)
+
+
+def get_transaction_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> TransactionRepository:
+    return TransactionRepository(db)
+
+
+def get_inventory_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> InventoryRepository:
+    return InventoryRepository(db)
+
+
+def get_inventory_movement_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> InventoryMovementRepository:
+    return InventoryMovementRepository(db)
+
+
+def get_supplier_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> SupplierRepository:
+    return SupplierRepository(db)
+
+
+def get_voice_log_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> VoiceLogRepository:
+    return VoiceLogRepository(db)
+
+
+def get_conversation_history_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> ConversationHistoryRepository:
+    return ConversationHistoryRepository(db)
+
+
+def get_business_memory_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> BusinessMemoryRepository:
+    return BusinessMemoryRepository(db)
+
+
+def get_government_scheme_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> GovernmentSchemeRepository:
+    return GovernmentSchemeRepository(db)
+
+
+def get_opportunity_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> OpportunityRepository:
+    return OpportunityRepository(db)
+
+
+def get_mentor_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> MentorRepository:
+    return MentorRepository(db)
+
+
+def get_notification_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> NotificationRepository:
+    return NotificationRepository(db)

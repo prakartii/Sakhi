@@ -1,8 +1,7 @@
 """Aggregates all v1 endpoint routers into a single api_router mounted by
 app.main under settings.API_V1_PREFIX.
 
-Empty by design — no CRUD endpoints exist yet. As each feature's endpoints
-are implemented under app.api.v1.endpoints, register them here, e.g.:
+Register each feature's router here as it's implemented, e.g.:
 
     from app.api.v1.endpoints import business_profiles
     api_router.include_router(
@@ -14,4 +13,42 @@ are implemented under app.api.v1.endpoints, register them here, e.g.:
 
 from fastapi import APIRouter
 
+from app.api.v1.endpoints import (
+    brand_assets,
+    business_profiles,
+    inventory,
+    transactions,
+    websites,
+)
+
 api_router = APIRouter()
+
+api_router.include_router(
+    business_profiles.router,
+    prefix="/business-profiles",
+    tags=["business-profiles"],
+)
+
+api_router.include_router(
+    brand_assets.router,
+    prefix="/brand-assets",
+    tags=["brand-assets"],
+)
+
+api_router.include_router(
+    websites.router,
+    prefix="/websites",
+    tags=["websites"],
+)
+
+api_router.include_router(
+    transactions.router,
+    prefix="/transactions",
+    tags=["transactions"],
+)
+
+api_router.include_router(
+    inventory.router,
+    prefix="/inventory",
+    tags=["inventory"],
+)

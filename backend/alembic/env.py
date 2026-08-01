@@ -17,9 +17,10 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from app.core.config import settings
 from app.db.base import Base
 
-# Import model modules here so Base.metadata is fully populated before
-# autogenerate runs, e.g.:
-# from app.models import business_profile  # noqa: F401
+# app.models/__init__.py imports every model module, which is what actually
+# registers each table on Base.metadata — without this import, autogenerate
+# would see an empty metadata and propose dropping every table in the DB.
+import app.models  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.sqlalchemy_database_uri)
