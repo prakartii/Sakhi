@@ -88,10 +88,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:title", content: "Sakhi Companion — she speaks, and her day appears" },
       { name: "twitter:title", content: "Sakhi Companion — she speaks, and her day appears" },
-      { property: "og:description", content: "One voice check-in in your own language. Sakhi remembers every order, price and supplier — then tells you what to do next." },
-      { name: "twitter:description", content: "One voice check-in in your own language. Sakhi remembers every order, price and supplier — then tells you what to do next." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0e37fbb8-c16a-4396-b122-cf5f3afd4af9/id-preview-8101b758--c3c09779-fad1-4ae6-9be7-c99cb636175e.lovable.app-1785528295315.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0e37fbb8-c16a-4396-b122-cf5f3afd4af9/id-preview-8101b758--c3c09779-fad1-4ae6-9be7-c99cb636175e.lovable.app-1785528295315.png" },
+      {
+        property: "og:description",
+        content:
+          "One voice check-in in your own language. Sakhi remembers every order, price and supplier — then tells you what to do next.",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "One voice check-in in your own language. Sakhi remembers every order, price and supplier — then tells you what to do next.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0e37fbb8-c16a-4396-b122-cf5f3afd4af9/id-preview-8101b758--c3c09779-fad1-4ae6-9be7-c99cb636175e.lovable.app-1785528295315.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0e37fbb8-c16a-4396-b122-cf5f3afd4af9/id-preview-8101b758--c3c09779-fad1-4ae6-9be7-c99cb636175e.lovable.app-1785528295315.png",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

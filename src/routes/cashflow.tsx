@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Check, PiggyBank, TrendingDown, TrendingUp } from "lucide-react";
 import { Page } from "@/components/sakhi/Layout";
 import { MicPanel } from "@/components/sakhi/MicPanel";
 import { Reveal } from "@/components/sakhi/Reveal";
-import { Action, Basis, Craft, Eyebrow, HandNote, Hero, Stat, Why } from "@/components/sakhi/Cards";
+import { Action, Basis, Craft, Eyebrow, HandNote, Why } from "@/components/sakhi/Cards";
+import { IconBadge, TextileSwatch, WashiTape } from "@/components/sakhi/CompanionAssets";
 
 export const Route = createFileRoute("/cashflow")({
   head: () => ({
@@ -88,7 +90,36 @@ const STAGES = [
     copy: "6 months of records · Mudra & Vishwakarma eligible",
     done: true,
   },
-  { n: 4, title: "Marketplace-Ready", copy: "Needs 12 product photos + GST — 2 steps left", done: false },
+  {
+    n: 4,
+    title: "Marketplace-Ready",
+    copy: "Needs 12 product photos + GST — 2 steps left",
+    done: false,
+  },
+];
+
+const SUMMARY = [
+  {
+    label: "Money in (July)",
+    value: "₹61,800",
+    sub: "22 orders",
+    icon: TrendingUp,
+    tone: "leaf" as const,
+  },
+  {
+    label: "Money out (July)",
+    value: "₹40,460",
+    sub: "fabric, dye, courier, labour",
+    icon: TrendingDown,
+    tone: "rose" as const,
+  },
+  {
+    label: "Net kept",
+    value: "₹21,340",
+    sub: "+18% vs June",
+    icon: PiggyBank,
+    tone: "marigold" as const,
+  },
 ];
 
 function Cashflow() {
@@ -96,28 +127,56 @@ function Cashflow() {
     <Page>
       <section className="grid items-center gap-10 py-14 lg:grid-cols-[1.15fr_0.85fr]">
         <Reveal>
-          <Hero
-            eyebrow="Cashflow & financial health"
-            title="Your money, explained in sentences —"
-            accent="not spreadsheets."
-            copy="What came in, what went out, and the one thing to fix this month before it costs you."
-          />
+          <div className="relative">
+            <span className="inline-block rounded-full bg-sand px-3.5 py-1.5 text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+              Cashflow &amp; financial health
+            </span>
+            <h1 className="mt-6 font-display font-semibold tracking-tight text-foreground">
+              <span className="block text-3xl sm:text-4xl">Your money,</span>
+              <span className="block text-4xl sm:text-5xl">explained in</span>
+              <span className="block text-5xl text-leaf-ink italic sm:text-6xl">
+                sentences, not spreadsheets.
+              </span>
+            </h1>
+            <p className="mt-6 max-w-md text-[15px] leading-relaxed font-light text-muted-foreground sm:text-base">
+              What came in, what went out, and the one thing to fix this month before it costs you.
+            </p>
+          </div>
         </Reveal>
         <Reveal delay={120}>
-          <MicPanel title="Ask about money" quote="&ldquo;Is mahine kitna bacha?&rdquo;" />
+          <div className="relative mx-auto w-full max-w-sm rounded-[2rem] p-2">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 rounded-[2rem]"
+              style={{ border: "2px solid color-mix(in oklab, var(--leaf-ink) 45%, transparent)" }}
+            />
+            <TextileSwatch
+              cell="ikat"
+              className="pointer-events-none absolute -top-6 -right-6 z-20 h-16 w-16 rounded-full ring-4 ring-background"
+            />
+            <WashiTape tone="leaf" rotate={-4} className="left-8 -top-2.5" />
+            <MicPanel
+              title="Ask about money"
+              quote="&ldquo;Is mahine kitna bacha?&rdquo;"
+              className="relative z-10"
+            />
+          </div>
         </Reveal>
       </section>
 
       <div className="thread opacity-50" />
 
       <section className="grid gap-4 py-10 sm:grid-cols-3">
-        {[
-          { label: "Money in (July)", value: "₹61,800", sub: "22 orders" },
-          { label: "Money out (July)", value: "₹40,460", sub: "fabric, dye, courier, labour" },
-          { label: "Net kept", value: "₹21,340", sub: "+18% vs June" },
-        ].map((s, i) => (
+        {SUMMARY.map((s, i) => (
           <Reveal key={s.label} delay={i * 90}>
-            <Stat {...s} />
+            <div className="card-soft lift flex items-center gap-3 rounded-2xl px-5 py-4">
+              <IconBadge icon={s.icon} tone={s.tone} />
+              <div className="min-w-0">
+                <Eyebrow>{s.label}</Eyebrow>
+                <p className="mt-1 font-display text-xl font-semibold text-foreground">{s.value}</p>
+                <p className="text-[11px] text-muted-foreground">{s.sub}</p>
+              </div>
+            </div>
           </Reveal>
         ))}
       </section>
@@ -191,13 +250,13 @@ function Cashflow() {
                 key={s.n}
                 className="rounded-2xl border border-clay/20 bg-card/85 px-4 py-3 transition-transform hover:-translate-y-1"
               >
-                <span
-                  className={`grid h-6 w-6 place-items-center rounded-full text-[11px] font-semibold ${
-                    s.done ? "bg-wine text-primary-foreground" : "bg-sand text-muted-foreground"
-                  }`}
-                >
-                  {s.n}
-                </span>
+                {s.done ? (
+                  <IconBadge icon={Check} tone="leaf" className="h-6 w-6" />
+                ) : (
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-sand text-[11px] font-semibold text-muted-foreground">
+                    {s.n}
+                  </span>
+                )}
                 <p className="mt-2 text-[13px] font-semibold">{s.title}</p>
                 <p className="mt-1 text-[11px] text-muted-foreground">{s.copy}</p>
               </div>
@@ -208,7 +267,9 @@ function Cashflow() {
             sales and a linked bank account. Photos and GST are the only gaps left.
           </Why>
           <Basis />
-          <HandNote>Six months ago you weren't sure you had a business. The records say you do.</HandNote>
+          <HandNote>
+            Six months ago you weren't sure you had a business. The records say you do.
+          </HandNote>
         </Craft>
       </Reveal>
     </Page>

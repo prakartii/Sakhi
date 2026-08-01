@@ -1,18 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Heart, IndianRupee, Users2, Video } from "lucide-react";
 import { Page } from "@/components/sakhi/Layout";
 import { MicPanel } from "@/components/sakhi/MicPanel";
 import { Reveal } from "@/components/sakhi/Reveal";
-import {
-  Action,
-  Basis,
-  Craft,
-  Eyebrow,
-  HandNote,
-  Hero,
-  Pill,
-  Stat,
-  Why,
-} from "@/components/sakhi/Cards";
+import { Action, Basis, Craft, Eyebrow, HandNote, Pill, Why } from "@/components/sakhi/Cards";
+import { IconBadge, WashiTape } from "@/components/sakhi/CompanionAssets";
 
 export const Route = createFileRoute("/mentors")({
   head: () => ({
@@ -80,33 +72,79 @@ const MENTORS = [
   },
 ];
 
+const STATS = [
+  {
+    label: "Mentors matched",
+    value: "4",
+    sub: "to problems in your own records",
+    icon: Users2,
+    tone: "lilac" as const,
+  },
+  {
+    label: "Sessions taken",
+    value: "7",
+    sub: "since February",
+    icon: Video,
+    tone: "indigo" as const,
+  },
+  {
+    label: "Value traced back",
+    value: "₹31,000",
+    sub: "from the June pricing session",
+    icon: IndianRupee,
+    tone: "leaf" as const,
+  },
+];
+
 function Mentors() {
   return (
     <Page>
       <section className="grid items-center gap-10 py-14 lg:grid-cols-[1.15fr_0.85fr]">
         <Reveal>
-          <Hero
-            eyebrow="Mentor network"
-            title="Women who already solved"
-            accent="what you're facing."
-            copy="Matched to the exact problem in your records this month — not a directory to scroll through."
-          />
+          <div className="relative">
+            <span className="inline-block rounded-full bg-sand px-3.5 py-1.5 text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+              Mentor network
+            </span>
+            <h1 className="mt-6 font-display font-semibold tracking-tight text-foreground">
+              <span className="block text-3xl sm:text-4xl">Women who</span>
+              <span className="block text-4xl sm:text-5xl">already solved</span>
+              <span className="relative inline-block text-5xl text-[oklch(0.42_0.1_300)] italic sm:text-6xl">
+                what you're facing.
+                <Heart className="absolute -top-1 -right-7 h-4 w-4 -rotate-12 text-[oklch(0.42_0.1_300)]/40" />
+              </span>
+            </h1>
+            <p className="mt-6 max-w-md text-[15px] leading-relaxed font-light text-muted-foreground sm:text-base">
+              Matched to the exact problem in your records this month — not a directory to scroll
+              through.
+            </p>
+          </div>
         </Reveal>
         <Reveal delay={120}>
-          <MicPanel title="Ask for a mentor" quote="&ldquo;Isme kaun madad kar sakta hai?&rdquo;" />
+          <div className="relative mx-auto w-full max-w-sm pt-3">
+            <WashiTape tone="indigo" rotate={-4} className="left-8 -top-2.5" />
+            <WashiTape tone="rose" rotate={3} className="right-8 -top-2.5" />
+            <MicPanel
+              title="Ask for a mentor"
+              quote="&ldquo;Isme kaun madad kar sakta hai?&rdquo;"
+              className="relative z-10"
+            />
+          </div>
         </Reveal>
       </section>
 
       <div className="thread opacity-50" />
 
       <section className="grid gap-4 py-10 sm:grid-cols-3">
-        {[
-          { label: "Mentors matched", value: "4", sub: "to problems in your own records" },
-          { label: "Sessions taken", value: "7", sub: "since February" },
-          { label: "Value traced back", value: "₹31,000", sub: "from the June pricing session" },
-        ].map((s, i) => (
+        {STATS.map((s, i) => (
           <Reveal key={s.label} delay={i * 90}>
-            <Stat {...s} />
+            <div className="card-soft lift flex items-center gap-3 rounded-2xl px-5 py-4">
+              <IconBadge icon={s.icon} tone={s.tone} />
+              <div className="min-w-0">
+                <Eyebrow>{s.label}</Eyebrow>
+                <p className="mt-1 font-display text-xl font-semibold text-foreground">{s.value}</p>
+                <p className="text-[11px] text-muted-foreground">{s.sub}</p>
+              </div>
+            </div>
           </Reveal>
         ))}
       </section>

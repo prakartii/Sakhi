@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Bell } from "lucide-react";
 import { Page } from "@/components/sakhi/Layout";
 import { MicPanel } from "@/components/sakhi/MicPanel";
 import { Reveal } from "@/components/sakhi/Reveal";
-import { Action, Basis, Craft, Eyebrow, HandNote, Hero, Pill, Why } from "@/components/sakhi/Cards";
+import { Action, Basis, Craft, Eyebrow, HandNote, Pill, Why } from "@/components/sakhi/Cards";
+import { BotanicalMark, IconBadge } from "@/components/sakhi/CompanionAssets";
+import { StickyNote } from "@/components/sakhi/CompanionHero";
 
 export const Route = createFileRoute("/noticed")({
   head: () => ({
@@ -81,15 +84,41 @@ function Noticed() {
     <Page>
       <section className="grid items-center gap-10 py-14 lg:grid-cols-[1.15fr_0.85fr]">
         <Reveal>
-          <Hero
-            eyebrow="Predictive intelligence"
-            title="Sakhi noticed something"
-            accent="before you had to."
-            copy="Five things worth your attention this week. Each one says what happened, why it matters to your rupees, and the single next step."
-          />
+          <div className="relative">
+            <BotanicalMark className="pointer-events-none absolute -top-8 -left-12 hidden h-48 w-36 opacity-[0.1] lg:block" />
+            <span className="relative inline-block rounded-full bg-sand px-3.5 py-1.5 text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+              Predictive intelligence
+            </span>
+            <h1 className="relative mt-6 font-display font-semibold tracking-tight text-foreground">
+              <span className="block text-3xl sm:text-4xl">Sakhi noticed</span>
+              <span className="block text-4xl sm:text-5xl">something</span>
+              <span className="block text-5xl text-wine italic sm:text-6xl">
+                before you had to.
+              </span>
+            </h1>
+            <p className="relative mt-6 max-w-md text-[15px] leading-relaxed font-light text-muted-foreground sm:text-base">
+              Five things worth your attention this week. Each one says what happened, why it
+              matters to your rupees, and the single next step.
+            </p>
+            <div className="relative mt-7 flex items-center gap-3 rounded-2xl bg-marigold/60 px-4 py-3">
+              <IconBadge icon={Bell} tone="marigold" />
+              <p className="text-[13px] font-medium text-wine-soft">
+                5 signals waiting, spotted in your own records
+              </p>
+            </div>
+          </div>
         </Reveal>
         <Reveal delay={120}>
-          <MicPanel title="Ask Sakhi why" quote="&ldquo;Iska kya matlab hai?&rdquo;" />
+          <div className="relative mx-auto w-full max-w-sm">
+            <StickyNote rotate={4} className="absolute -top-6 -right-6 z-20 hidden sm:block">
+              ✎ before it costs you
+            </StickyNote>
+            <MicPanel
+              title="Ask Sakhi why"
+              quote="&ldquo;Iska kya matlab hai?&rdquo;"
+              className="relative z-10"
+            />
+          </div>
         </Reveal>
       </section>
 
@@ -113,7 +142,9 @@ function Noticed() {
         ))}
       </section>
 
-      <HandNote>Five spotted warnings this week. Last month you caught three of them in time.</HandNote>
+      <HandNote>
+        Five spotted warnings this week. Last month you caught three of them in time.
+      </HandNote>
     </Page>
   );
 }

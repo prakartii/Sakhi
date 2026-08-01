@@ -1,0 +1,75 @@
+-- =====================================================================
+-- Migration 18: Row-Level Security — SUGGESTIONS ONLY, NOT APPLIED
+-- =====================================================================
+-- Per scope, RLS is proposed but intentionally NOT enabled here. This
+-- file documents the intended policy shape so it can be turned into a
+-- real migration once auth/session wiring is in place. Nothing below
+-- executes (every statement is commented out).
+--
+-- General approach for every business-scoped table (business_memory,
+-- transactions, inventory, suppliers, voice_logs, conversation_history,
+-- forecast_history, scheme_matches, opportunity_matches, mentor_matches):
+--   1. enable RLS on the table.
+--   2. a single policy: row is visible/writable iff its business_profile_id
+--      belongs to a business_profiles row owned by auth.uid().
+--
+-- For users / user_preferences: row visible/writable iff id / user_id = auth.uid().
+--
+-- For global catalogs (languages, government_schemes, opportunities,
+-- mentor_profiles): public SELECT for all authenticated users, writes
+-- restricted to a service_role / admin path (no end-user INSERT/UPDATE).
+--
+-- For notifications: visible/writable iff user_id = auth.uid().
+-- =====================================================================
+
+-- -- Example: business_profiles
+-- alter table public.business_profiles enable row level security;
+-- create policy "Users manage their own business profiles"
+--   on public.business_profiles
+--   for all
+--   using (user_id = auth.uid())
+--   with check (user_id = auth.uid());
+
+-- -- Example: a business-scoped child table (pattern repeats for
+-- -- business_memory, transactions, inventory, suppliers, voice_logs,
+-- -- conversation_history, forecast_history, scheme_matches,
+-- -- opportunity_matches, mentor_matches, transaction_items via its
+-- -- parent transaction, inventory_movements via its parent inventory)
+-- alter table public.transactions enable row level security;
+-- create policy "Users manage transactions of their own businesses"
+--   on public.transactions
+--   for all
+--   using (
+--     business_profile_id in (
+--       select id from public.business_profiles where user_id = auth.uid()
+--     )
+--   )
+--   with check (
+--     business_profile_id in (
+--       select id from public.business_profiles where user_id = auth.uid()
+--     )
+--   );
+
+-- -- Example: users / user_preferences (row IS the user)
+-- alter table public.users enable row level security;
+-- create policy "Users read/update their own row"
+--   on public.users
+--   for all
+--   using (id = auth.uid())
+--   with check (id = auth.uid());
+
+-- -- Example: global read-only catalog
+-- alter table public.government_schemes enable row level security;
+-- create policy "Authenticated users can read active schemes"
+--   on public.government_schemes
+--   for select
+--   using (is_active = true);
+-- -- writes intentionally omitted: catalog is maintained by service_role only.
+
+-- -- Example: notifications
+-- alter table public.notifications enable row level security;
+-- create policy "Users see their own notifications"
+--   on public.notifications
+--   for all
+--   using (user_id = auth.uid())
+--   with check (user_id = auth.uid());

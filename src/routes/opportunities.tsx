@@ -1,18 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
+import {
+  CalendarClock,
+  GraduationCap,
+  Handshake,
+  IndianRupee,
+  Landmark,
+  ShoppingBag,
+  Sparkles,
+} from "lucide-react";
 import { Page } from "@/components/sakhi/Layout";
 import { MicPanel } from "@/components/sakhi/MicPanel";
 import { Reveal } from "@/components/sakhi/Reveal";
-import {
-  Action,
-  Basis,
-  Craft,
-  Eyebrow,
-  HandNote,
-  Hero,
-  Pill,
-  Stat,
-  Why,
-} from "@/components/sakhi/Cards";
+import { Action, Basis, Craft, Eyebrow, HandNote, Pill, Why } from "@/components/sakhi/Cards";
+import { IconBadge } from "@/components/sakhi/CompanionAssets";
 
 export const Route = createFileRoute("/opportunities")({
   head: () => ({
@@ -104,33 +104,80 @@ const OPPS = [
   },
 ];
 
+const STATS = [
+  {
+    label: "Open opportunities",
+    value: "6",
+    sub: "matched this week",
+    icon: Sparkles,
+    tone: "lilac" as const,
+  },
+  {
+    label: "Combined potential",
+    value: "₹1,36,000",
+    sub: "if the top three land",
+    icon: IndianRupee,
+    tone: "leaf" as const,
+  },
+  {
+    label: "Nearest deadline",
+    value: "31 Aug",
+    sub: "PM Vishwakarma window",
+    icon: CalendarClock,
+    tone: "rose" as const,
+  },
+];
+
 function Opportunities() {
   return (
     <Page>
       <section className="grid items-center gap-10 py-14 lg:grid-cols-[1.1fr_0.9fr]">
         <Reveal>
-          <Hero
-            eyebrow="Opportunity engine"
-            title="The right opportunities"
-            accent="before you even look."
-            copy="Sales, schemes, learning and partnerships matched against your own records — each with the reason it fits and what it's worth in rupees."
-          />
+          <div className="relative">
+            <span className="inline-block rounded-full bg-sand px-3.5 py-1.5 text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+              Opportunity engine
+            </span>
+            <h1 className="mt-6 font-display font-semibold tracking-tight text-foreground">
+              <span className="block text-3xl sm:text-4xl">The right</span>
+              <span className="block text-4xl sm:text-5xl">opportunities,</span>
+              <span className="block text-5xl text-[oklch(0.42_0.1_300)] italic sm:text-6xl">
+                before you even look.
+              </span>
+            </h1>
+            <p className="mt-6 max-w-md text-[15px] leading-relaxed font-light text-muted-foreground sm:text-base">
+              Sales, schemes, learning and partnerships matched against your own records — each with
+              the reason it fits and what it's worth in rupees.
+            </p>
+          </div>
         </Reveal>
         <Reveal delay={120}>
-          <MicPanel title="Ask what's worth doing" quote="&ldquo;Ab kya karna chahiye?&rdquo;" />
+          <div className="relative mx-auto grid w-full max-w-sm grid-cols-2 gap-3 pt-3 sm:gap-4">
+            <IconBadge icon={ShoppingBag} tone="marigold" className="mx-auto h-12 w-12" />
+            <IconBadge icon={Landmark} tone="leaf" className="mx-auto h-12 w-12" />
+            <MicPanel
+              title="Ask what's worth doing"
+              quote="&ldquo;Ab kya karna chahiye?&rdquo;"
+              className="relative z-10 col-span-2"
+            />
+            <IconBadge icon={GraduationCap} tone="indigo" className="mx-auto h-12 w-12" />
+            <IconBadge icon={Handshake} tone="rose" className="mx-auto h-12 w-12" />
+          </div>
         </Reveal>
       </section>
 
       <div className="thread opacity-50" />
 
       <section className="grid gap-4 py-10 sm:grid-cols-3">
-        {[
-          { label: "Open opportunities", value: "6", sub: "matched this week" },
-          { label: "Combined potential", value: "₹1,36,000", sub: "if the top three land" },
-          { label: "Nearest deadline", value: "31 Aug", sub: "PM Vishwakarma window" },
-        ].map((s, i) => (
+        {STATS.map((s, i) => (
           <Reveal key={s.label} delay={i * 90}>
-            <Stat {...s} />
+            <div className="card-soft lift flex items-center gap-3 rounded-2xl px-5 py-4">
+              <IconBadge icon={s.icon} tone={s.tone} />
+              <div className="min-w-0">
+                <Eyebrow>{s.label}</Eyebrow>
+                <p className="mt-1 font-display text-xl font-semibold text-foreground">{s.value}</p>
+                <p className="text-[11px] text-muted-foreground">{s.sub}</p>
+              </div>
+            </div>
           </Reveal>
         ))}
       </section>

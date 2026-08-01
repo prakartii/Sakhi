@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Clock, Package, ShieldCheck } from "lucide-react";
 import { Page } from "@/components/sakhi/Layout";
 import { MicPanel } from "@/components/sakhi/MicPanel";
 import { Reveal } from "@/components/sakhi/Reveal";
@@ -8,12 +9,11 @@ import {
   Craft,
   Eyebrow,
   HandNote,
-  Hero,
   Meter,
   Pill,
-  Stat,
   Why,
 } from "@/components/sakhi/Cards";
+import { IconBadge } from "@/components/sakhi/CompanionAssets";
 
 export const Route = createFileRoute("/inventory")({
   head: () => ({
@@ -89,33 +89,81 @@ const ITEMS = [
   },
 ];
 
+const STATS = [
+  {
+    label: "Items tracked by voice",
+    value: "11",
+    sub: "no forms, no typing",
+    icon: Package,
+    tone: "indigo" as const,
+  },
+  {
+    label: "Nearest stockout",
+    value: "4 days",
+    sub: "gift packaging boxes",
+    icon: Clock,
+    tone: "rose" as const,
+  },
+  {
+    label: "Revenue protected",
+    value: "₹35,000",
+    sub: "if all 4 reorders go out this week",
+    icon: ShieldCheck,
+    tone: "leaf" as const,
+  },
+];
+
 function Inventory() {
   return (
     <Page>
       <section className="grid items-center gap-10 py-14 lg:grid-cols-[1.15fr_0.85fr]">
         <Reveal>
-          <Hero
-            eyebrow="Smart inventory"
-            title="You counted your stock out loud."
-            accent="Sakhi did the rest."
-            copy="Every bought 100, sold 72 becomes a date — the day you run out, and the day to reorder before it."
-          />
+          <div className="relative">
+            <span className="inline-block rounded-full bg-sand px-3.5 py-1.5 text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+              Smart inventory
+            </span>
+            <h1 className="mt-6 font-display font-semibold tracking-tight text-foreground">
+              <span className="block text-3xl sm:text-4xl">You counted your</span>
+              <span className="block text-4xl sm:text-5xl">stock out loud.</span>
+              <span className="block text-5xl text-[oklch(0.45_0.13_255)] italic sm:text-6xl">
+                Sakhi did the rest.
+              </span>
+            </h1>
+            <p className="mt-6 max-w-md text-[15px] leading-relaxed font-light text-muted-foreground sm:text-base">
+              Every bought 100, sold 72 becomes a date — the day you run out, and the day to reorder
+              before it.
+            </p>
+          </div>
         </Reveal>
         <Reveal delay={120}>
-          <MicPanel title="Update stock" quote="&ldquo;Aaj 12 bache.&rdquo;" />
+          <div className="card-soft lift relative mx-auto flex w-full max-w-sm overflow-hidden rounded-[1.75rem]">
+            <div className="flex w-9 shrink-0 flex-col items-center justify-center gap-2.5 border-r border-dashed border-clay/40 bg-sand">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <span key={i} className="h-1 w-1 rounded-full bg-[oklch(0.45_0.13_255)]/50" />
+              ))}
+            </div>
+            <MicPanel
+              title="Update stock"
+              quote="&ldquo;Aaj 12 bache.&rdquo;"
+              className="!rounded-none !border-0 !shadow-none flex-1"
+            />
+          </div>
         </Reveal>
       </section>
 
       <div className="thread opacity-50" />
 
       <section className="grid gap-4 py-10 sm:grid-cols-3">
-        {[
-          { label: "Items tracked by voice", value: "11", sub: "no forms, no typing" },
-          { label: "Nearest stockout", value: "4 days", sub: "gift packaging boxes" },
-          { label: "Revenue protected", value: "₹35,000", sub: "if all 4 reorders go out this week" },
-        ].map((s, i) => (
+        {STATS.map((s, i) => (
           <Reveal key={s.label} delay={i * 90}>
-            <Stat {...s} />
+            <div className="card-soft lift flex items-center gap-3 rounded-2xl px-5 py-4">
+              <IconBadge icon={s.icon} tone={s.tone} />
+              <div className="min-w-0">
+                <Eyebrow>{s.label}</Eyebrow>
+                <p className="mt-1 font-display text-xl font-semibold text-foreground">{s.value}</p>
+                <p className="text-[11px] text-muted-foreground">{s.sub}</p>
+              </div>
+            </div>
           </Reveal>
         ))}
       </section>
@@ -147,7 +195,9 @@ function Inventory() {
         <Reveal>
           <Craft tone="marigold" className="h-full">
             <Eyebrow>Restock reminders</Eyebrow>
-            <h3 className="mt-2 font-display text-xl font-semibold">Three calls to make this week</h3>
+            <h3 className="mt-2 font-display text-xl font-semibold">
+              Three calls to make this week
+            </h3>
             <ul className="mt-3 space-y-2 text-[12.5px] text-foreground/75">
               <li>Mon · Packaging supplier, Johari Bazaar — 200 boxes, ₹3,400</li>
               <li>Wed · Bagru dyer — 40 metres indigo cloth, ₹9,200 (9-day lead)</li>
