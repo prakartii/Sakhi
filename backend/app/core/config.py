@@ -66,6 +66,32 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     EMBEDDING_DIM: int = 1536
 
+    # --- Image provider (app.ai.image) ---
+    # Not an LLM call — a separate vendor/settings group from AI_PROVIDER.
+    # FLUX.1-schnell-Free is Together's free-tier fast image model, good
+    # enough for a demo; swap TOGETHER_IMAGE_MODEL for a paid one for
+    # higher quality without touching code.
+    IMAGE_PROVIDER: Literal["together"] = "together"
+    TOGETHER_API_KEY: str | None = None
+    TOGETHER_IMAGE_MODEL: str = "black-forest-labs/FLUX.1-schnell-Free"
+
+    # --- Voice provider (app.ai.voice) ---
+    # Sarvam AI handles STT/TTS for Indian languages; Groq (AI_PROVIDER
+    # above) remains the unchanged reasoning step — separate vendor/
+    # settings group by design. VOICE_PROVIDER=browser is the fallback:
+    # the Web Speech API handles STT client-side and sends text instead
+    # of audio, guaranteeing a working demo path if Sarvam is slow/down.
+    VOICE_PROVIDER: Literal["sarvam", "browser"] = "sarvam"
+    SARVAM_API_KEY: str | None = None
+    SARVAM_STT_MODEL: str = "saaras:v3"
+    SARVAM_TTS_MODEL: str = "bulbul:v3"
+    SARVAM_TTS_SPEAKER: str = "anushka"
+    SARVAM_TIMEOUT_SECONDS: float = 15.0
+    # Optional pivot: translate to English before Groq, then back before
+    # TTS, for languages where Groq's own multilingual output is weak.
+    # Default off — same-language round-trip is lower latency.
+    VOICE_TRANSLATE_PIVOT: bool = False
+
     @property
     def sqlalchemy_database_uri(self) -> str:
         """DATABASE_URL rewritten for SQLAlchemy's async psycopg 3 dialect.
