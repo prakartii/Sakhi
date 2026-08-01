@@ -2,6 +2,7 @@ import { useState, type ComponentType } from "react";
 import { Eye, EyeOff, Globe, Lock, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -54,24 +55,45 @@ export function LanguageSelect({
   );
 }
 
+export function FieldError({ id, message }: { id: string; message?: string | undefined }) {
+  if (!message) return null;
+  return (
+    <p id={id} role="alert" className="mt-1.5 text-[12px] font-medium text-destructive">
+      {message}
+    </p>
+  );
+}
+
 export function LabeledInput({
   label,
   icon: Icon,
+  error,
+  id,
   ...props
 }: {
   label: string;
   icon: ComponentType<{ className?: string }>;
+  error?: string | undefined;
 } & React.InputHTMLAttributes<HTMLInputElement>) {
+  const inputId = id ?? `field-${label.toLowerCase().replace(/\s+/g, "-")}`;
+  const errorId = `${inputId}-error`;
   return (
-    <label className="block">
+    <label className="block" htmlFor={inputId}>
       <span className="mb-1.5 block text-[13px] font-medium text-foreground/85">{label}</span>
       <span className="relative flex items-center">
         <Icon className="pointer-events-none absolute left-3.5 h-4 w-4 text-muted-foreground" />
         <Input
+          id={inputId}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : undefined}
           {...props}
-          className="h-11 rounded-xl border-clay/25 bg-card pl-10 text-[14px] shadow-sm placeholder:text-muted-foreground/70 focus-visible:ring-wine/30"
+          className={cn(
+            "h-11 rounded-xl border-clay/25 bg-card pl-10 text-[14px] shadow-sm placeholder:text-muted-foreground/70 focus-visible:ring-wine/30",
+            error && "border-destructive/60 focus-visible:ring-destructive/30",
+          )}
         />
       </span>
+      <FieldError id={errorId} message={error} />
     </label>
   );
 }
@@ -81,55 +103,154 @@ export function PasswordField({
   placeholder = "Enter your password",
   value,
   onChange,
+  error,
+  autoComplete,
+  id,
 }: {
   label?: string;
   placeholder?: string;
   value: string;
   onChange: (v: string) => void;
+  error?: string | undefined;
+  autoComplete?: string;
+  id?: string;
 }) {
   const [visible, setVisible] = useState(false);
+  const inputId = id ?? `field-${label.toLowerCase().replace(/\s+/g, "-")}`;
+  const errorId = `${inputId}-error`;
   return (
-    <label className="block">
+    <label className="block" htmlFor={inputId}>
       <span className="mb-1.5 block text-[13px] font-medium text-foreground/85">{label}</span>
       <span className="relative flex items-center">
         <Lock className="pointer-events-none absolute left-3.5 h-4 w-4 text-muted-foreground" />
         <Input
+          id={inputId}
           type={visible ? "text" : "password"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="h-11 rounded-xl border-clay/25 bg-card pr-10 pl-10 text-[14px] shadow-sm placeholder:text-muted-foreground/70 focus-visible:ring-wine/30"
+          autoComplete={autoComplete}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : undefined}
+          className={cn(
+            "h-11 rounded-xl border-clay/25 bg-card pr-10 pl-10 text-[14px] shadow-sm placeholder:text-muted-foreground/70 focus-visible:ring-wine/30",
+            error && "border-destructive/60 focus-visible:ring-destructive/30",
+          )}
         />
         <button
           type="button"
           aria-label={visible ? "Hide password" : "Show password"}
+          aria-pressed={visible}
           onClick={() => setVisible((v) => !v)}
           className="absolute right-3.5 text-muted-foreground transition-colors hover:text-wine"
         >
           {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </button>
       </span>
+      <FieldError id={errorId} message={error} />
     </label>
+  );
+}
+
+export const COUNTRY_CODES = [
+  { value: "IN", flag: "🇮🇳", dial: "+91" },
+  { value: "US", flag: "🇺🇸", dial: "+1" },
+  { value: "GB", flag: "🇬🇧", dial: "+44" },
+  { value: "AE", flag: "🇦🇪", dial: "+971" },
+  { value: "BD", flag: "🇧🇩", dial: "+880" },
+  { value: "NP", flag: "🇳🇵", dial: "+977" },
+  { value: "PK", flag: "🇵🇰", dial: "+92" },
+  { value: "LK", flag: "🇱🇰", dial: "+94" },
+] as const;
+
+export function CountryCodeSelect({
+  value,
+  onValueChange,
+}: {
+  value: string;
+  onValueChange: (v: string) => void;
+}) {
+  const current = COUNTRY_CODES.find((c) => c.value === value) ?? COUNTRY_CODES[0];
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger className="h-11 w-[5.25rem] shrink-0 gap-1 rounded-none border-0 border-r border-clay/20 bg-transparent px-3 text-[13.5px] shadow-none focus:ring-0 [&>svg]:opacity-50">
+        <span className="flex items-center gap-1">
+          <span aria-hidden>{current.flag}</span>
+          <span>{current.dial}</span>
+        </span>
+      </SelectTrigger>
+      <SelectContent>
+        {COUNTRY_CODES.map((c) => (
+          <SelectItem key={c.value} value={c.value}>
+            <span className="flex items-center gap-2">
+              <span aria-hidden>{c.flag}</span> {c.dial}
+            </span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
 export function MobileField({
   value,
   onChange,
+  countryCode,
+  onCountryCodeChange,
+  error,
 }: {
   value: string;
   onChange: (v: string) => void;
+  countryCode: string;
+  onCountryCodeChange: (v: string) => void;
+  error?: string | undefined;
+}) {
+  const errorId = "field-mobile-number-error";
+  return (
+    <label className="block" htmlFor="field-mobile-number">
+      <span className="mb-1.5 block text-[13px] font-medium text-foreground/85">
+        Mobile Number
+      </span>
+      <span
+        className={cn(
+          "flex items-center overflow-hidden rounded-xl border border-clay/25 bg-card shadow-sm focus-within:ring-1 focus-within:ring-wine/30",
+          error && "border-destructive/60 focus-within:ring-destructive/30",
+        )}
+      >
+        <CountryCodeSelect value={countryCode} onValueChange={onCountryCodeChange} />
+        <span className="relative flex flex-1 items-center">
+          <Phone className="pointer-events-none absolute left-3.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            id="field-mobile-number"
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel-national"
+            placeholder="Enter your mobile number"
+            value={value}
+            onChange={(e) => onChange(e.target.value.replace(/[^\d]/g, "").slice(0, 12))}
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : undefined}
+            className="h-11 rounded-none border-0 bg-transparent pl-10 text-[14px] shadow-none placeholder:text-muted-foreground/70 focus-visible:ring-0"
+          />
+        </span>
+      </span>
+      <FieldError id={errorId} message={error} />
+    </label>
+  );
+}
+
+export function RememberMe({
+  checked,
+  onCheckedChange,
+}: {
+  checked: boolean;
+  onCheckedChange: (v: boolean) => void;
 }) {
   return (
-    <LabeledInput
-      label="Mobile Number"
-      icon={Phone}
-      type="tel"
-      inputMode="numeric"
-      placeholder="Enter your mobile number"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
+    <label className="flex select-none items-center gap-2 text-[13px] text-foreground/80">
+      <Checkbox checked={checked} onCheckedChange={(v) => onCheckedChange(v === true)} />
+      Remember me
+    </label>
   );
 }
 
@@ -178,7 +299,7 @@ export function FeatureItem({
     <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
       <span
         className={cn(
-          "grid h-11 w-11 shrink-0 place-items-center rounded-full",
+          "grid h-11 w-11 shrink-0 place-items-center rounded-full transition-transform duration-300 hover:scale-110",
           FEATURE_TONE[tone],
         )}
       >

@@ -10,7 +10,13 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdvisorRouteImport } from './routes/advisor'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
+import { Route as BrandStudioRouteImport } from './routes/brand-studio'
+import { Route as BusinessSetupRouteImport } from './routes/business-setup'
 import { Route as CashflowRouteImport } from './routes/cashflow'
+import { Route as ContentCalendarRouteImport } from './routes/content-calendar'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MemoryRouteImport } from './routes/memory'
@@ -18,15 +24,47 @@ import { Route as MentorsRouteImport } from './routes/mentors'
 import { Route as NoticedRouteImport } from './routes/noticed'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
 import { Route as SchemesRouteImport } from './routes/schemes'
+import { Route as SocialStudioRouteImport } from './routes/social-studio'
+import { Route as WebsiteStudioRouteImport } from './routes/website-studio'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdvisorRoute = AdvisorRouteImport.update({
+  id: '/advisor',
+  path: '/advisor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrandStudioRoute = BrandStudioRouteImport.update({
+  id: '/brand-studio',
+  path: '/brand-studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BusinessSetupRoute = BusinessSetupRouteImport.update({
+  id: '/business-setup',
+  path: '/business-setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CashflowRoute = CashflowRouteImport.update({
   id: '/cashflow',
   path: '/cashflow',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContentCalendarRoute = ContentCalendarRouteImport.update({
+  id: '/content-calendar',
+  path: '/content-calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InventoryRoute = InventoryRouteImport.update({
@@ -64,10 +102,26 @@ const SchemesRoute = SchemesRouteImport.update({
   path: '/schemes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SocialStudioRoute = SocialStudioRouteImport.update({
+  id: '/social-studio',
+  path: '/social-studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WebsiteStudioRoute = WebsiteStudioRouteImport.update({
+  id: '/website-studio',
+  path: '/website-studio',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/advisor': typeof AdvisorRoute
+  '/analytics': typeof AnalyticsRoute
+  '/brand-studio': typeof BrandStudioRoute
+  '/business-setup': typeof BusinessSetupRoute
   '/cashflow': typeof CashflowRoute
+  '/content-calendar': typeof ContentCalendarRoute
+  '/dashboard': typeof DashboardRoute
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
   '/memory': typeof MemoryRoute
@@ -75,10 +129,18 @@ export interface FileRoutesByFullPath {
   '/noticed': typeof NoticedRoute
   '/opportunities': typeof OpportunitiesRoute
   '/schemes': typeof SchemesRoute
+  '/social-studio': typeof SocialStudioRoute
+  '/website-studio': typeof WebsiteStudioRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/advisor': typeof AdvisorRoute
+  '/analytics': typeof AnalyticsRoute
+  '/brand-studio': typeof BrandStudioRoute
+  '/business-setup': typeof BusinessSetupRoute
   '/cashflow': typeof CashflowRoute
+  '/content-calendar': typeof ContentCalendarRoute
+  '/dashboard': typeof DashboardRoute
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
   '/memory': typeof MemoryRoute
@@ -86,11 +148,19 @@ export interface FileRoutesByTo {
   '/noticed': typeof NoticedRoute
   '/opportunities': typeof OpportunitiesRoute
   '/schemes': typeof SchemesRoute
+  '/social-studio': typeof SocialStudioRoute
+  '/website-studio': typeof WebsiteStudioRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/advisor': typeof AdvisorRoute
+  '/analytics': typeof AnalyticsRoute
+  '/brand-studio': typeof BrandStudioRoute
+  '/business-setup': typeof BusinessSetupRoute
   '/cashflow': typeof CashflowRoute
+  '/content-calendar': typeof ContentCalendarRoute
+  '/dashboard': typeof DashboardRoute
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
   '/memory': typeof MemoryRoute
@@ -98,12 +168,20 @@ export interface FileRoutesById {
   '/noticed': typeof NoticedRoute
   '/opportunities': typeof OpportunitiesRoute
   '/schemes': typeof SchemesRoute
+  '/social-studio': typeof SocialStudioRoute
+  '/website-studio': typeof WebsiteStudioRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/advisor'
+    | '/analytics'
+    | '/brand-studio'
+    | '/business-setup'
     | '/cashflow'
+    | '/content-calendar'
+    | '/dashboard'
     | '/inventory'
     | '/login'
     | '/memory'
@@ -111,10 +189,18 @@ export interface FileRouteTypes {
     | '/noticed'
     | '/opportunities'
     | '/schemes'
+    | '/social-studio'
+    | '/website-studio'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/advisor'
+    | '/analytics'
+    | '/brand-studio'
+    | '/business-setup'
     | '/cashflow'
+    | '/content-calendar'
+    | '/dashboard'
     | '/inventory'
     | '/login'
     | '/memory'
@@ -122,10 +208,18 @@ export interface FileRouteTypes {
     | '/noticed'
     | '/opportunities'
     | '/schemes'
+    | '/social-studio'
+    | '/website-studio'
   id:
     | '__root__'
     | '/'
+    | '/advisor'
+    | '/analytics'
+    | '/brand-studio'
+    | '/business-setup'
     | '/cashflow'
+    | '/content-calendar'
+    | '/dashboard'
     | '/inventory'
     | '/login'
     | '/memory'
@@ -133,11 +227,19 @@ export interface FileRouteTypes {
     | '/noticed'
     | '/opportunities'
     | '/schemes'
+    | '/social-studio'
+    | '/website-studio'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdvisorRoute: typeof AdvisorRoute
+  AnalyticsRoute: typeof AnalyticsRoute
+  BrandStudioRoute: typeof BrandStudioRoute
+  BusinessSetupRoute: typeof BusinessSetupRoute
   CashflowRoute: typeof CashflowRoute
+  ContentCalendarRoute: typeof ContentCalendarRoute
+  DashboardRoute: typeof DashboardRoute
   InventoryRoute: typeof InventoryRoute
   LoginRoute: typeof LoginRoute
   MemoryRoute: typeof MemoryRoute
@@ -145,6 +247,8 @@ export interface RootRouteChildren {
   NoticedRoute: typeof NoticedRoute
   OpportunitiesRoute: typeof OpportunitiesRoute
   SchemesRoute: typeof SchemesRoute
+  SocialStudioRoute: typeof SocialStudioRoute
+  WebsiteStudioRoute: typeof WebsiteStudioRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -156,11 +260,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/advisor': {
+      id: '/advisor'
+      path: '/advisor'
+      fullPath: '/advisor'
+      preLoaderRoute: typeof AdvisorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/brand-studio': {
+      id: '/brand-studio'
+      path: '/brand-studio'
+      fullPath: '/brand-studio'
+      preLoaderRoute: typeof BrandStudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/business-setup': {
+      id: '/business-setup'
+      path: '/business-setup'
+      fullPath: '/business-setup'
+      preLoaderRoute: typeof BusinessSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cashflow': {
       id: '/cashflow'
       path: '/cashflow'
       fullPath: '/cashflow'
       preLoaderRoute: typeof CashflowRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/content-calendar': {
+      id: '/content-calendar'
+      path: '/content-calendar'
+      fullPath: '/content-calendar'
+      preLoaderRoute: typeof ContentCalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inventory': {
@@ -212,12 +358,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SchemesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/social-studio': {
+      id: '/social-studio'
+      path: '/social-studio'
+      fullPath: '/social-studio'
+      preLoaderRoute: typeof SocialStudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/website-studio': {
+      id: '/website-studio'
+      path: '/website-studio'
+      fullPath: '/website-studio'
+      preLoaderRoute: typeof WebsiteStudioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdvisorRoute: AdvisorRoute,
+  AnalyticsRoute: AnalyticsRoute,
+  BrandStudioRoute: BrandStudioRoute,
+  BusinessSetupRoute: BusinessSetupRoute,
   CashflowRoute: CashflowRoute,
+  ContentCalendarRoute: ContentCalendarRoute,
+  DashboardRoute: DashboardRoute,
   InventoryRoute: InventoryRoute,
   LoginRoute: LoginRoute,
   MemoryRoute: MemoryRoute,
@@ -225,6 +391,8 @@ const rootRouteChildren: RootRouteChildren = {
   NoticedRoute: NoticedRoute,
   OpportunitiesRoute: OpportunitiesRoute,
   SchemesRoute: SchemesRoute,
+  SocialStudioRoute: SocialStudioRoute,
+  WebsiteStudioRoute: WebsiteStudioRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
