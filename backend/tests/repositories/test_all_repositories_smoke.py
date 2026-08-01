@@ -15,16 +15,23 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from app.models.enums import PublishingStatus, SocialMediaPlatform
 from app.repositories.brand_asset import BrandAssetRepository
 from app.repositories.business_memory import BusinessMemoryRepository
 from app.repositories.business_profile import BusinessProfileRepository
+from app.repositories.content_calendar_item import ContentCalendarItemRepository
 from app.repositories.conversation_history import ConversationHistoryRepository
 from app.repositories.government_scheme import GovernmentSchemeRepository
 from app.repositories.inventory import InventoryRepository
 from app.repositories.inventory_movement import InventoryMovementRepository
+from app.repositories.marketing_analytics_snapshot import (
+    MarketingAnalyticsSnapshotRepository,
+)
 from app.repositories.mentor import MentorRepository
 from app.repositories.notification import NotificationRepository
 from app.repositories.opportunity import OpportunityRepository
+from app.repositories.scheduled_post import ScheduledPostRepository
+from app.repositories.social_media_connection import SocialMediaConnectionRepository
 from app.repositories.supplier import SupplierRepository
 from app.repositories.transaction import TransactionRepository
 from app.repositories.voice_log import VoiceLogRepository
@@ -47,6 +54,8 @@ REPOSITORY_TABLES = {
     OpportunityRepository: "opportunities",
     MentorRepository: "mentor_profiles",
     NotificationRepository: "notifications",
+    SocialMediaConnectionRepository: "social_media_connections",
+    ContentCalendarItemRepository: "content_calendar_items",
 }
 
 
@@ -176,6 +185,29 @@ async def test_notification_list_by_user_filters_user_id():
     assert "notifications.user_id" in rendered
 
 
+async def test_social_media_connection_list_by_business_profile_filters_business_profile_id():
+    session = _mock_session()
+    repo = SocialMediaConnectionRepository(session)
+
+    await repo.list_by_business_profile(uuid.uuid4())
+
+    rendered = str(session.execute.call_args_list[-1].args[0])
+    assert "social_media_connections.business_profile_id" in rendered
+
+
+async def test_social_media_connection_get_by_business_profile_and_platform_filters_both():
+    session = _mock_session()
+    repo = SocialMediaConnectionRepository(session)
+
+    await repo.get_by_business_profile_and_platform(
+        uuid.uuid4(), SocialMediaPlatform.INSTAGRAM
+    )
+
+    rendered = str(session.execute.call_args_list[-1].args[0])
+    assert "social_media_connections.business_profile_id" in rendered
+    assert "social_media_connections.platform" in rendered
+
+
 async def test_conversation_history_list_by_session_orders_chronologically():
     session = _mock_session()
     repo = ConversationHistoryRepository(session)
@@ -285,3 +317,211 @@ async def test_inventory_movement_list_by_inventory_orders_by_movement_date_desc
 
     rendered = str(session.execute.call_args_list[-1].args[0])
     assert "ORDER BY inventory_movements.movement_date DESC" in rendered
+
+
+async def test_content_calendar_item_list_by_business_profile_filters_business_profile_id():
+    session = _mock_session()
+    repo = ContentCalendarItemRepository(session)
+
+    await repo.list_by_business_profile(uuid.uuid4())
+
+    rendered = str(session.execute.call_args_list[-1].args[0])
+    assert "content_calendar_items.business_profile_id" in rendered
+
+
+async def test_content_calendar_item_list_by_date_range_filters_scheduled_datetime():
+    from datetime import datetime, timezone
+
+    session = _mock_session()
+    repo = ContentCalendarItemRepository(session)
+
+    await repo.list_by_date_range(
+        uuid.uuid4(),
+        start=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        end=datetime(2026, 2, 1, tzinfo=timezone.utc),
+        platform=SocialMediaPlatform.INSTAGRAM,
+    )
+
+    rendered = str(session.execute.call_args_list[-1].args[0])
+    assert "content_calendar_items.scheduled_datetime" in rendered
+    assert "content_calendar_items.platform" in rendered
+
+
+# ScheduledPostRepository isn't in REPOSITORY_TABLES above (and so doesn't
+# go through the generic parametrized create/get_by_id/update/delete/
+# search loop): it has no search() — see that repository's module
+# docstring for why — so it's exercised directly here instead, covering
+# the same generic contract by hand plus its three list methods.
+
+
+async def test_scheduled_post_binds_to_the_correct_table():
+    repo = ScheduledPostRepository(_mock_session())
+    assert repo.model.__tablename__ == "scheduled_posts"
+
+
+async def test_scheduled_post_generic_crud_contract_executes_against_the_real_model():
+    session = _mock_session()
+    repo = ScheduledPostRepository(session)
+
+    assert await repo.get_by_id(uuid.uuid4()) is None
+    assert await repo.exists(uuid.uuid4()) is False
+    assert await repo.count() == 0
+
+    items, total = await repo.get_all()
+    assert items == []
+    assert total == 0
+
+    instance = repo.model()
+    created = await repo.create(instance)
+    assert created is instance
+    session.add.assert_called_once_with(instance)
+
+    updated = await repo.update(instance, {})
+    assert updated is instance
+
+    await repo.delete(instance)
+    session.delete.assert_awaited_once_with(instance)
+
+
+async def test_scheduled_post_list_by_business_profile_filters_business_profile_id():
+    session = _mock_session()
+    repo = ScheduledPostRepository(session)
+
+    await repo.list_by_business_profile(uuid.uuid4())
+
+    rendered = str(session.execute.call_args_list[-1].args[0])
+    assert "scheduled_posts.business_profile_id" in rendered
+
+
+async def test_scheduled_post_list_queue_filters_to_queued_and_publishing():
+    session = _mock_session()
+    repo = ScheduledPostRepository(session)
+
+    await repo.list_queue(uuid.uuid4())
+
+    rendered = str(session.execute.call_args_list[-1].args[0])
+    assert "scheduled_posts.publishing_status IN" in rendered
+
+
+async def test_scheduled_post_list_history_defaults_to_resolved_statuses_ordered_desc():
+    session = _mock_session()
+    repo = ScheduledPostRepository(session)
+
+    await repo.list_history(uuid.uuid4())
+
+    rendered = str(session.execute.call_args_list[-1].args[0])
+    assert "scheduled_posts.publishing_status IN" in rendered
+    assert "ORDER BY scheduled_posts.updated_at DESC" in rendered
+
+
+async def test_scheduled_post_list_history_narrows_to_one_status_when_given():
+    session = _mock_session()
+    repo = ScheduledPostRepository(session)
+
+    await repo.list_history(uuid.uuid4(), publishing_status=PublishingStatus.FAILED)
+
+    rendered = str(session.execute.call_args_list[-1].args[0])
+    assert "scheduled_posts.publishing_status IN" in rendered
+
+
+# MarketingAnalyticsSnapshotRepository isn't in REPOSITORY_TABLES above for
+# the same reason ScheduledPostRepository isn't: no search() — see that
+# repository's module docstring for why — so it's exercised directly here
+# too, covering the generic contract by hand plus its three aggregate/
+# lookup methods.
+
+
+async def test_marketing_analytics_snapshot_binds_to_the_correct_table():
+    repo = MarketingAnalyticsSnapshotRepository(_mock_session())
+    assert repo.model.__tablename__ == "marketing_analytics_snapshots"
+
+
+async def test_marketing_analytics_snapshot_generic_crud_contract_executes_against_the_real_model():
+    session = _mock_session()
+    repo = MarketingAnalyticsSnapshotRepository(session)
+
+    assert await repo.get_by_id(uuid.uuid4()) is None
+    assert await repo.exists(uuid.uuid4()) is False
+    assert await repo.count() == 0
+
+    items, total = await repo.get_all()
+    assert items == []
+    assert total == 0
+
+    instance = repo.model()
+    created = await repo.create(instance)
+    assert created is instance
+    session.add.assert_called_once_with(instance)
+
+    updated = await repo.update(instance, {})
+    assert updated is instance
+
+    await repo.delete(instance)
+    session.delete.assert_awaited_once_with(instance)
+
+
+async def test_marketing_analytics_snapshot_aggregate_by_bucket_groups_by_date_trunc():
+    from datetime import datetime, timezone
+
+    session = _mock_session()
+    repo = MarketingAnalyticsSnapshotRepository(session)
+
+    await repo.aggregate_by_bucket(
+        uuid.uuid4(),
+        bucket="day",
+        start=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        end=datetime(2026, 2, 1, tzinfo=timezone.utc),
+    )
+
+    rendered = str(session.execute.call_args_list[-1].args[0])
+    assert "date_trunc" in rendered.lower()
+    assert "marketing_analytics_snapshots.business_profile_id" in rendered
+    assert "marketing_analytics_snapshots.captured_at" in rendered
+    assert "sum(marketing_analytics_snapshots.reach)" in rendered.lower()
+    assert "avg(marketing_analytics_snapshots.followers)" in rendered.lower()
+    assert "group by" in rendered.lower()
+
+
+async def test_marketing_analytics_snapshot_aggregate_by_bucket_filters_by_social_connection():
+    from datetime import datetime, timezone
+
+    session = _mock_session()
+    repo = MarketingAnalyticsSnapshotRepository(session)
+
+    await repo.aggregate_by_bucket(
+        uuid.uuid4(),
+        bucket="week",
+        start=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        end=datetime(2026, 2, 1, tzinfo=timezone.utc),
+        social_connection_id=uuid.uuid4(),
+    )
+
+    rendered = str(session.execute.call_args_list[-1].args[0])
+    assert "marketing_analytics_snapshots.social_connection_id" in rendered
+
+
+async def test_marketing_analytics_snapshot_aggregate_period_has_no_group_by():
+    from datetime import datetime, timezone
+
+    session = _mock_session()
+    repo = MarketingAnalyticsSnapshotRepository(session)
+
+    await repo.aggregate_period(
+        uuid.uuid4(),
+        start=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        end=datetime(2026, 2, 1, tzinfo=timezone.utc),
+    )
+
+    rendered = str(session.execute.call_args_list[-1].args[0])
+    assert "group by" not in rendered.lower()
+    assert "coalesce(sum(marketing_analytics_snapshots.engagement)" in rendered.lower()
+
+
+async def test_marketing_analytics_snapshot_get_latest_orders_by_captured_at_desc():
+    session = _mock_session()
+    repo = MarketingAnalyticsSnapshotRepository(session)
+
+    await repo.get_latest(uuid.uuid4())
+
+    rendered = str(session.execute.call_args_list[-1].args[0])
+    assert "ORDER BY marketing_analytics_snapshots.captured_at DESC" in rendered

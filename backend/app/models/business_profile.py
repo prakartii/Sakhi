@@ -37,14 +37,18 @@ from app.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 if TYPE_CHECKING:
     from app.models.brand_asset import BrandAsset
     from app.models.business_memory import BusinessMemory
+    from app.models.content_calendar_item import ContentCalendarItem
     from app.models.conversation_history import ConversationHistory
     from app.models.forecast_history import ForecastHistory
     from app.models.inventory import Inventory
     from app.models.language import Language
+    from app.models.marketing_analytics_snapshot import MarketingAnalyticsSnapshot
     from app.models.mentor_match import MentorMatch
     from app.models.notification import Notification
     from app.models.opportunity_match import OpportunityMatch
+    from app.models.scheduled_post import ScheduledPost
     from app.models.scheme_match import SchemeMatch
+    from app.models.social_media_connection import SocialMediaConnection
     from app.models.supplier import Supplier
     from app.models.transaction import Transaction
     from app.models.user import User
@@ -159,6 +163,18 @@ class BusinessProfile(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     notifications: Mapped[list["Notification"]] = relationship(
         back_populates="business_profile"
+    )
+    social_media_connections: Mapped[list["SocialMediaConnection"]] = relationship(
+        back_populates="business_profile"
+    )
+    content_calendar_items: Mapped[list["ContentCalendarItem"]] = relationship(
+        back_populates="business_profile"
+    )
+    scheduled_posts: Mapped[list["ScheduledPost"]] = relationship(
+        back_populates="business_profile"
+    )
+    marketing_analytics_snapshots: Mapped[list["MarketingAnalyticsSnapshot"]] = (
+        relationship(back_populates="business_profile")
     )
 
 

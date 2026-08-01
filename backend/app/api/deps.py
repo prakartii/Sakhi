@@ -17,13 +17,19 @@ from app.db.session import get_db as get_db_session
 from app.repositories.brand_asset import BrandAssetRepository
 from app.repositories.business_memory import BusinessMemoryRepository
 from app.repositories.business_profile import BusinessProfileRepository
+from app.repositories.content_calendar_item import ContentCalendarItemRepository
 from app.repositories.conversation_history import ConversationHistoryRepository
 from app.repositories.government_scheme import GovernmentSchemeRepository
 from app.repositories.inventory import InventoryRepository
 from app.repositories.inventory_movement import InventoryMovementRepository
+from app.repositories.marketing_analytics_snapshot import (
+    MarketingAnalyticsSnapshotRepository,
+)
 from app.repositories.mentor import MentorRepository
 from app.repositories.notification import NotificationRepository
 from app.repositories.opportunity import OpportunityRepository
+from app.repositories.scheduled_post import ScheduledPostRepository
+from app.repositories.social_media_connection import SocialMediaConnectionRepository
 from app.repositories.supplier import SupplierRepository
 from app.repositories.transaction import TransactionRepository
 from app.repositories.voice_log import VoiceLogRepository
@@ -47,6 +53,10 @@ __all__ = [
     "get_opportunity_repository",
     "get_mentor_repository",
     "get_notification_repository",
+    "get_social_media_connection_repository",
+    "get_content_calendar_item_repository",
+    "get_scheduled_post_repository",
+    "get_marketing_analytics_snapshot_repository",
 ]
 
 
@@ -138,3 +148,27 @@ def get_notification_repository(
     db: AsyncSession = Depends(get_db_session),
 ) -> NotificationRepository:
     return NotificationRepository(db)
+
+
+def get_social_media_connection_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> SocialMediaConnectionRepository:
+    return SocialMediaConnectionRepository(db)
+
+
+def get_content_calendar_item_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> ContentCalendarItemRepository:
+    return ContentCalendarItemRepository(db)
+
+
+def get_scheduled_post_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> ScheduledPostRepository:
+    return ScheduledPostRepository(db)
+
+
+def get_marketing_analytics_snapshot_repository(
+    db: AsyncSession = Depends(get_db_session),
+) -> MarketingAnalyticsSnapshotRepository:
+    return MarketingAnalyticsSnapshotRepository(db)

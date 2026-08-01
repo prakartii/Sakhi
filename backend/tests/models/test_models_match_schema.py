@@ -59,12 +59,12 @@ def test_no_model_maps_a_table_absent_from_migrations():
     ), f"Models mapping tables not found in any migration: {sorted(extra)}"
 
 
-def test_all_24_feature_tables_are_modeled():
+def test_all_28_feature_tables_are_modeled():
     # Pinned count as a tripwire: if this drifts, __all__ in
     # app/models/__init__.py and/or the migrations disagree about how many
     # tables exist — worth a human looking rather than silently passing.
-    assert len(_tables_declared_in_migrations()) == 24
-    assert len(models_package.__all__) == 24
+    assert len(_tables_declared_in_migrations()) == 28
+    assert len(models_package.__all__) == 28
 
 
 def test_all_mappers_configure_without_error():

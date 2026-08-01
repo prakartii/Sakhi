@@ -16,7 +16,12 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     brand_assets,
     business_profiles,
+    content_calendar_items,
     inventory,
+    marketing_analytics_snapshots,
+    notifications,
+    scheduled_posts,
+    social_media_connections,
     transactions,
     websites,
 )
@@ -51,4 +56,34 @@ api_router.include_router(
     inventory.router,
     prefix="/inventory",
     tags=["inventory"],
+)
+
+api_router.include_router(
+    notifications.router,
+    prefix="/notifications",
+    tags=["notifications"],
+)
+
+api_router.include_router(
+    social_media_connections.router,
+    prefix="/social-connections",
+    tags=["social-media-connections"],
+)
+
+api_router.include_router(
+    content_calendar_items.router,
+    prefix="/content-calendar",
+    tags=["content-calendar"],
+)
+
+api_router.include_router(
+    scheduled_posts.router,
+    prefix="/scheduled-posts",
+    tags=["scheduled-posts"],
+)
+
+api_router.include_router(
+    marketing_analytics_snapshots.router,
+    prefix="/marketing-analytics",
+    tags=["marketing-analytics"],
 )

@@ -17,13 +17,19 @@ from app.repositories.base import (
 from app.repositories.brand_asset import BrandAssetRepository
 from app.repositories.business_memory import BusinessMemoryRepository
 from app.repositories.business_profile import BusinessProfileRepository
+from app.repositories.content_calendar_item import ContentCalendarItemRepository
 from app.repositories.conversation_history import ConversationHistoryRepository
 from app.repositories.government_scheme import GovernmentSchemeRepository
 from app.repositories.inventory import InventoryRepository
 from app.repositories.inventory_movement import InventoryMovementRepository
+from app.repositories.marketing_analytics_snapshot import (
+    MarketingAnalyticsSnapshotRepository,
+)
 from app.repositories.mentor import MentorRepository
 from app.repositories.notification import NotificationRepository
 from app.repositories.opportunity import OpportunityRepository
+from app.repositories.scheduled_post import ScheduledPostRepository
+from app.repositories.social_media_connection import SocialMediaConnectionRepository
 from app.repositories.supplier import SupplierRepository
 from app.repositories.transaction import TransactionRepository
 from app.repositories.voice_log import VoiceLogRepository
@@ -49,4 +55,8 @@ __all__ = [
     "OpportunityRepository",
     "MentorRepository",
     "NotificationRepository",
+    "SocialMediaConnectionRepository",
+    "ContentCalendarItemRepository",
+    "ScheduledPostRepository",
+    "MarketingAnalyticsSnapshotRepository",
 ]

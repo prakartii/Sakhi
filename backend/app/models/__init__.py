@@ -45,6 +45,10 @@ from app.models.mentor_profile import MentorProfile
 from app.models.mentor_match import MentorMatch
 from app.models.forecast_history import ForecastHistory
 from app.models.notification import Notification
+from app.models.social_media_connection import SocialMediaConnection
+from app.models.content_calendar_item import ContentCalendarItem
+from app.models.scheduled_post import ScheduledPost
+from app.models.marketing_analytics_snapshot import MarketingAnalyticsSnapshot
 
 __all__ = [
     "Language",
@@ -71,4 +75,8 @@ __all__ = [
     "MentorMatch",
     "ForecastHistory",
     "Notification",
+    "SocialMediaConnection",
+    "ContentCalendarItem",
+    "ScheduledPost",
+    "MarketingAnalyticsSnapshot",
 ]

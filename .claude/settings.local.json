@@ -18,7 +18,24 @@
       "Bash(./.venv/Scripts/python.exe -m ruff format app tests alembic)",
       "Bash(./.venv/Scripts/python.exe -m ruff format app tests)",
       "Bash(./.venv/Scripts/python.exe -m pytest -q)",
-      "Bash(./.venv/Scripts/python.exe -m ruff check app tests --fix)"
+      "Bash(./.venv/Scripts/python.exe -m ruff check app tests --fix)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/ai -q --durations=10)",
+      "Bash(python -m venv .venv_verify)",
+      "Bash(./.venv_verify/Scripts/python -m pip install -q -r requirements-dev.txt)",
+      "Bash(./.venv_verify/Scripts/python -m pytest -q)",
+      "Bash(./.venv_verify/Scripts/python -m ruff check .)",
+      "Bash(./.venv_verify/Scripts/python -m ruff format --check .)",
+      "Bash(./.venv_verify/Scripts/python -m ruff format app/schemas/notification.py app/services/notification.py app/api/v1/endpoints/notifications.py app/api/v1/router.py tests/schemas/test_notification_schema.py tests/services/test_notification_service.py tests/api/test_notifications_router.py)",
+      "Bash(./.venv_verify/Scripts/python -m ruff format --check app/models/enums.py app/models/social_media_connection.py app/models/__init__.py app/models/business_profile.py app/repositories/social_media_connection.py app/repositories/__init__.py app/api/deps.py app/schemas/social_media_connection.py app/services/social_media_connection.py app/api/v1/endpoints/social_media_connections.py app/api/v1/router.py tests/schemas/test_social_media_connection_schema.py tests/services/test_social_media_connection_service.py tests/api/test_social_media_connections_router.py tests/repositories/test_all_repositories_smoke.py tests/models/test_models_match_schema.py)",
+      "Bash(./.venv_verify/Scripts/python -m ruff format tests/api/test_social_media_connections_router.py tests/services/test_social_media_connection_service.py)",
+      "Bash(./.venv_verify/Scripts/python -m ruff format --check app/models/enums.py app/models/content_calendar_item.py app/models/social_media_connection.py app/models/__init__.py app/models/business_profile.py app/repositories/content_calendar_item.py app/repositories/__init__.py app/api/deps.py app/schemas/content_calendar_item.py app/services/content_calendar_item.py app/api/v1/endpoints/content_calendar_items.py app/api/v1/router.py tests/schemas/test_content_calendar_item_schema.py tests/services/test_content_calendar_item_service.py tests/api/test_content_calendar_items_router.py tests/repositories/test_all_repositories_smoke.py tests/models/test_models_match_schema.py)",
+      "Bash(./.venv_verify/Scripts/python -m ruff format app/api/v1/endpoints/content_calendar_items.py app/services/content_calendar_item.py tests/api/test_content_calendar_items_router.py tests/services/test_content_calendar_item_service.py)",
+      "Bash(./.venv_verify/Scripts/python -m ruff format --check app/models/enums.py app/models/scheduled_post.py app/models/content_calendar_item.py app/models/social_media_connection.py app/models/business_profile.py app/models/__init__.py app/repositories/scheduled_post.py app/repositories/__init__.py app/api/deps.py app/schemas/scheduled_post.py app/services/scheduled_post.py app/api/v1/endpoints/scheduled_posts.py app/api/v1/router.py tests/schemas/test_scheduled_post_schema.py tests/services/test_scheduled_post_service.py tests/api/test_scheduled_posts_router.py tests/repositories/test_all_repositories_smoke.py tests/models/test_models_match_schema.py)",
+      "Bash(./.venv_verify/Scripts/python -m ruff format app/api/v1/endpoints/scheduled_posts.py app/repositories/scheduled_post.py app/services/scheduled_post.py tests/api/test_scheduled_posts_router.py tests/schemas/test_scheduled_post_schema.py tests/services/test_scheduled_post_service.py)",
+      "Bash(./.venv_verify/Scripts/python -m ruff format --check app/models/marketing_analytics_snapshot.py app/models/business_profile.py app/models/social_media_connection.py app/models/__init__.py app/repositories/marketing_analytics_snapshot.py app/repositories/__init__.py app/api/deps.py app/schemas/marketing_analytics_snapshot.py app/services/marketing_analytics_snapshot.py app/api/v1/endpoints/marketing_analytics_snapshots.py app/api/v1/router.py tests/schemas/test_marketing_analytics_snapshot_schema.py tests/services/test_marketing_analytics_snapshot_service.py tests/api/test_marketing_analytics_snapshots_router.py tests/repositories/test_all_repositories_smoke.py tests/models/test_models_match_schema.py)",
+      "Bash(./.venv_verify/Scripts/python -m ruff format app/api/v1/endpoints/marketing_analytics_snapshots.py app/repositories/marketing_analytics_snapshot.py app/services/marketing_analytics_snapshot.py tests/api/test_marketing_analytics_snapshots_router.py tests/schemas/test_marketing_analytics_snapshot_schema.py tests/services/test_marketing_analytics_snapshot_service.py)",
+      "Bash(xargs grep -ln \"include_router\")",
+      "Bash(python -c ' *)"
     ]
   }
 }

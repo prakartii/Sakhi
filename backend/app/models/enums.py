@@ -250,3 +250,41 @@ class ForecastType(str, Enum):
     REVENUE = "revenue"
     INVENTORY_DEMAND = "inventory_demand"
     GROWTH_SCORE = "growth_score"
+
+
+class SocialMediaPlatform(str, Enum):
+    INSTAGRAM = "instagram"
+    LINKEDIN = "linkedin"
+    FACEBOOK = "facebook"
+    PINTEREST = "pinterest"
+
+
+class SocialConnectionStatus(str, Enum):
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
+    EXPIRED = "expired"
+    ERROR = "error"
+
+
+class ContentType(str, Enum):
+    POST = "post"
+    STORY = "story"
+    REEL = "reel"
+    CAROUSEL = "carousel"
+    VIDEO = "video"
+
+
+class ContentStatus(str, Enum):
+    DRAFT = "draft"
+    SCHEDULED = "scheduled"
+    PUBLISHED = "published"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class PublishingStatus(str, Enum):
+    QUEUED = "queued"
+    PUBLISHING = "publishing"
+    PUBLISHED = "published"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
