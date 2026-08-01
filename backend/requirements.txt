@@ -14,3 +14,7 @@ psycopg[binary,pool]>=3.2.0,<3.3.0
 
 # --- Config / env ---
 python-dotenv>=1.0.1,<2.0.0
+
+# --- AI ---
+groq>=1.6.0,<2.0.0
+openai>=2.52.0,<3.0.0
