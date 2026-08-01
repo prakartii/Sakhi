@@ -46,6 +46,26 @@ class Settings(BaseSettings):
     # scope for this milestone. ---
     JWT_SECRET: str | None = None
 
+    # --- AI provider (app.ai.providers) ---
+    # AI_PROVIDER selects the implementation app.ai.providers.get_ai_provider()
+    # returns; every call site codes against the AIProvider interface, so
+    # switching to gemini/ollama later is a config change, not a call-site one.
+    AI_PROVIDER: Literal["groq"] = "groq"
+    GROQ_API_KEY: str | None = None
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    AI_TEMPERATURE: float = 0.3
+    AI_MAX_TOKENS: int = 1024
+
+    # --- Embedding provider (app.ai.embeddings) ---
+    # Groq doesn't serve embedding models, so this is configured separately
+    # from AI_PROVIDER above. EMBEDDING_DIM must match the fixed width of
+    # memory_embeddings.embedding (see supabase/migrations/19) — changing
+    # it requires a new migration, not just a settings change.
+    EMBEDDING_PROVIDER: Literal["openai"] = "openai"
+    OPENAI_API_KEY: str | None = None
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    EMBEDDING_DIM: int = 1536
+
     @property
     def sqlalchemy_database_uri(self) -> str:
         """DATABASE_URL rewritten for SQLAlchemy's async psycopg 3 dialect.

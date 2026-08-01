@@ -44,8 +44,24 @@ backend/
 │   ├── services/           Business logic layer. Routers call services; services
 │   │                        call repositories; services never touch AsyncSession
 │   │                        directly. Empty until business logic is implemented.
-│   ├── ai/                 Future home of LLM clients, prompt orchestration,
-│   │                        embedding generation. Out of scope now — empty.
+│   ├── ai/                 AI integration layer — all four AI/ML components.
+│   │   ├── providers/          Provider-agnostic `AIProvider` chat interface
+│   │   │                        (Groq by default), via get_ai_provider().
+│   │   ├── voice_parsing/      Transcript -> structured business_memory
+│   │   │                        candidates + sentiment (chat_json).
+│   │   ├── explanations/       Facts computed elsewhere -> "Why"/"Based on"
+│   │   │                        prose for frontend cards (chat_json).
+│   │   ├── forecasting/        Deterministic run-rate/moving-average math:
+│   │   │                        stockout dates, cashflow/revenue trend.
+│   │   ├── rules/               Deterministic weighted-criteria DSL: scheme/
+│   │   │                        opportunity eligibility, mentor-fit gating.
+│   │   └── embeddings/          Chunk + embed business_memory.content
+│   │                            (OpenAI text-embedding-3-small by default,
+│   │                            get_embedding_provider()) for pgvector
+│   │                            semantic search — needs migration 19.
+│   │                            Callers everywhere depend on each
+│   │                            subpackage's interface, never a vendor SDK
+│   │                            directly.
 │   ├── middleware/          ASGI middleware.
 │   │   └── logging.py          Per-request method/path/status/duration + request-id.
 │   ├── utils/               Small stateless helpers shared across layers. Empty —
