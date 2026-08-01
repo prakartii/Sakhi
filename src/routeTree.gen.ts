@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CashflowRouteImport } from './routes/cashflow'
 import { Route as InventoryRouteImport } from './routes/inventory'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as MentorsRouteImport } from './routes/mentors'
 import { Route as NoticedRouteImport } from './routes/noticed'
@@ -31,6 +32,11 @@ const CashflowRoute = CashflowRouteImport.update({
 const InventoryRoute = InventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MemoryRoute = MemoryRouteImport.update({
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cashflow': typeof CashflowRoute
   '/inventory': typeof InventoryRoute
+  '/login': typeof LoginRoute
   '/memory': typeof MemoryRoute
   '/mentors': typeof MentorsRoute
   '/noticed': typeof NoticedRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cashflow': typeof CashflowRoute
   '/inventory': typeof InventoryRoute
+  '/login': typeof LoginRoute
   '/memory': typeof MemoryRoute
   '/mentors': typeof MentorsRoute
   '/noticed': typeof NoticedRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/cashflow': typeof CashflowRoute
   '/inventory': typeof InventoryRoute
+  '/login': typeof LoginRoute
   '/memory': typeof MemoryRoute
   '/mentors': typeof MentorsRoute
   '/noticed': typeof NoticedRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/cashflow'
     | '/inventory'
+    | '/login'
     | '/memory'
     | '/mentors'
     | '/noticed'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/cashflow'
     | '/inventory'
+    | '/login'
     | '/memory'
     | '/mentors'
     | '/noticed'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/'
     | '/cashflow'
     | '/inventory'
+    | '/login'
     | '/memory'
     | '/mentors'
     | '/noticed'
@@ -127,6 +139,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CashflowRoute: typeof CashflowRoute
   InventoryRoute: typeof InventoryRoute
+  LoginRoute: typeof LoginRoute
   MemoryRoute: typeof MemoryRoute
   MentorsRoute: typeof MentorsRoute
   NoticedRoute: typeof NoticedRoute
@@ -155,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/inventory'
       fullPath: '/inventory'
       preLoaderRoute: typeof InventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/memory': {
@@ -199,6 +219,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CashflowRoute: CashflowRoute,
   InventoryRoute: InventoryRoute,
+  LoginRoute: LoginRoute,
   MemoryRoute: MemoryRoute,
   MentorsRoute: MentorsRoute,
   NoticedRoute: NoticedRoute,
