@@ -4,12 +4,12 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { RequireAuth, RequireBusinessProfile } from "@/components/sakhi/RouteGuards";
 import { useInvalidateBusinessProfiles } from "@/hooks/use-business-profile";
+import { useVoiceTranscribe } from "@/hooks/use-voice-transcribe";
 import { api, ApiError } from "@/lib/api-client";
 import {
   ArrowLeft,
   ArrowRight,
   Building2,
-  Gem,
   GraduationCap,
   Globe2,
   LayoutTemplate,
@@ -19,7 +19,7 @@ import {
   Palette,
   Rocket,
   Ship,
-  Shirt,
+  Square,
   Store,
   TrendingUp,
 } from "lucide-react";
@@ -78,51 +78,61 @@ type Product = {
   note: string;
 };
 
-const SAMPLE_PRODUCTS: Product[] = [
+const CUSTOMERS = [
+  {
+    icon: MapPin,
+    tone: "rose" as const,
+    label: "Local buyers",
+    note: "Neighbours and word of mouth",
+  },
   {
     icon: Package,
-    tone: "rose",
-    name: "Crochet handbag",
-    category: "Bags",
-    price: "₹899",
-    materials: "Cotton yarn",
-    note: "✎ best-seller since March",
+    tone: "marigold" as const,
+    label: "Instagram buyers",
+    note: "DMs and story replies",
   },
-  {
-    icon: Shirt,
-    tone: "marigold",
-    name: "Block-print dupatta",
-    category: "Textiles",
-    price: "₹640",
-    materials: "Cotton, natural dye",
-    note: "✎ raised price in June",
-  },
-  {
-    icon: Gem,
-    tone: "indigo",
-    name: "Beaded earrings",
-    category: "Accessories",
-    price: "₹350",
-    materials: "Glass beads",
-    note: "✎ pairs well with dupattas",
-  },
-];
-
-const CUSTOMERS = [
-  { icon: MapPin, tone: "rose" as const, label: "Local buyers", note: "Neighbours and word of mouth" },
-  { icon: Package, tone: "marigold" as const, label: "Instagram buyers", note: "DMs and story replies" },
   { icon: Building2, tone: "indigo" as const, label: "Wholesale", note: "Boutiques and shops" },
-  { icon: GraduationCap, tone: "leaf" as const, label: "College students", note: "Affordable, trend-led" },
+  {
+    icon: GraduationCap,
+    tone: "leaf" as const,
+    label: "College students",
+    note: "Affordable, trend-led",
+  },
   { icon: Globe2, tone: "lilac" as const, label: "Export", note: "Buyers outside India" },
 ];
 
 const GOALS = [
-  { icon: TrendingUp, tone: "rose" as const, label: "Increase sales", note: "Sell more of what already works" },
-  { icon: LayoutTemplate, tone: "marigold" as const, label: "Create a website", note: "A home beyond social media" },
-  { icon: Rocket, tone: "indigo" as const, label: "Launch online", note: "Start selling on marketplaces" },
-  { icon: Palette, tone: "leaf" as const, label: "Build a brand", note: "Look consistent everywhere" },
+  {
+    icon: TrendingUp,
+    tone: "rose" as const,
+    label: "Increase sales",
+    note: "Sell more of what already works",
+  },
+  {
+    icon: LayoutTemplate,
+    tone: "marigold" as const,
+    label: "Create a website",
+    note: "A home beyond social media",
+  },
+  {
+    icon: Rocket,
+    tone: "indigo" as const,
+    label: "Launch online",
+    note: "Start selling on marketplaces",
+  },
+  {
+    icon: Palette,
+    tone: "leaf" as const,
+    label: "Build a brand",
+    note: "Look consistent everywhere",
+  },
   { icon: Ship, tone: "lilac" as const, label: "Export products", note: "Reach buyers abroad" },
-  { icon: Store, tone: "sand" as const, label: "Open a studio", note: "A physical space of your own" },
+  {
+    icon: Store,
+    tone: "sand" as const,
+    label: "Open a studio",
+    note: "A physical space of your own",
+  },
 ];
 
 const PERSONALITIES = ["Warm", "Earthy", "Playful", "Minimal", "Festive", "Artisan"];
@@ -133,12 +143,13 @@ function BusinessSetup() {
   const invalidateBusinessProfiles = useInvalidateBusinessProfiles();
   const [step, setStep] = useState(0);
   const [story, setStory] = useState("");
-  const [products, setProducts] = useState(SAMPLE_PRODUCTS);
-  const [customers, setCustomers] = useState<string[]>(["Local buyers", "Instagram buyers"]);
-  const [goals, setGoals] = useState<string[]>(["Increase sales", "Build a brand"]);
-  const [businessName, setBusinessName] = useState("Kavita's Loom");
+  const voice = useVoiceTranscribe((text) => setStory((s) => (s ? `${s} ${text}` : text)));
+  const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<string[]>([]);
+  const [goals, setGoals] = useState<string[]>([]);
+  const [businessName, setBusinessName] = useState("");
   const [tagline, setTagline] = useState("");
-  const [personality, setPersonality] = useState<string[]>(["Warm", "Earthy"]);
+  const [personality, setPersonality] = useState<string[]>([]);
   const [palette, setPalette] = useState<JournalTone>("rose");
   const [newProduct, setNewProduct] = useState("");
   const [creating, setCreating] = useState(false);
@@ -249,13 +260,25 @@ function BusinessSetup() {
                   />
                   <button
                     type="button"
-                    onClick={() => toast.info("Voice capture isn't wired up yet")}
-                    aria-label="Speak instead"
-                    className="absolute right-3 bottom-3 grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground transition-transform hover:scale-105"
+                    onClick={voice.isRecording ? voice.stopRecording : voice.startRecording}
+                    disabled={voice.isBusy}
+                    aria-label={voice.isRecording ? "Stop recording" : "Speak instead"}
+                    className={`absolute right-3 bottom-3 grid h-9 w-9 place-items-center rounded-full text-primary-foreground transition-transform hover:scale-105 disabled:opacity-70 ${
+                      voice.isRecording ? "bg-wine animate-pulse" : "bg-primary"
+                    }`}
                   >
-                    <Mic className="h-4 w-4" />
+                    {voice.isBusy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : voice.isRecording ? (
+                      <Square className="h-3.5 w-3.5" />
+                    ) : (
+                      <Mic className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
+                {voice.errorMessage && (
+                  <p className="mt-2 text-[12px] text-wine">{voice.errorMessage}</p>
+                )}
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   {STORY_PROMPTS.map((p) => (
@@ -276,14 +299,16 @@ function BusinessSetup() {
                   Pin what you make
                 </h2>
                 <p className="mt-2 max-w-lg text-[13.5px] text-muted-foreground">
-                  A few pieces to start — you can always add more later.
+                  Add a few pieces to start — Sakhi only learns about products you add here.
                 </p>
 
-                <div className="mt-7 grid gap-x-6 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
-                  {products.map((p, i) => (
-                    <ProductCard key={p.name} {...p} rotate={i % 2 === 0 ? -2 : 2} />
-                  ))}
-                </div>
+                {products.length > 0 && (
+                  <div className="mt-7 grid gap-x-6 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
+                    {products.map((p, i) => (
+                      <ProductCard key={p.name} {...p} rotate={i % 2 === 0 ? -2 : 2} />
+                    ))}
+                  </div>
+                )}
 
                 <form onSubmit={handleAddProduct} className="mt-8 flex flex-wrap gap-2">
                   <input
@@ -477,7 +502,9 @@ function BusinessSetup() {
           {step === 0 && (
             <MarginNote>The more specific you are, the better Sakhi's suggestions get.</MarginNote>
           )}
-          {step === 1 && <MarginNote>Adding gift packaging could increase festival sales.</MarginNote>}
+          {step === 1 && (
+            <MarginNote>Adding gift packaging could increase festival sales.</MarginNote>
+          )}
           {step === 2 && (
             <MarginNote>Your products would appeal to urban college students.</MarginNote>
           )}

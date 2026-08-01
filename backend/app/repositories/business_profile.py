@@ -45,7 +45,13 @@ class BusinessProfileRepository(BaseRepository[BusinessProfile]):
         return await self.get_all(filters=filters, limit=limit, offset=offset)
 
     async def archive(self, business_profile: BusinessProfile) -> BusinessProfile:
+        # is_primary must also clear here: uq_business_profiles_primary_per_user
+        # is a partial unique index on (user_id) WHERE is_primary — leaving it
+        # true on an archived row would keep blocking that user from ever
+        # onboarding a replacement primary business, which defeats the point
+        # of archiving one in the first place.
         business_profile.status = BusinessStatus.ARCHIVED
+        business_profile.is_primary = False
         await self.session.flush()
         return business_profile
 

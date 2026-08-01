@@ -1,22 +1,20 @@
 import { useCallback, useRef, useState } from "react";
-import { postVoiceConverse, ApiError, type VoiceConverseResponse } from "@/lib/api-client";
-import { usePrimaryBusinessProfile } from "@/hooks/use-business-profile";
+import { postVoiceTranscribe, ApiError } from "@/lib/api-client";
 
-export type VoiceState = "idle" | "recording" | "processing" | "speaking" | "error";
+export type TranscribeState = "idle" | "recording" | "transcribing" | "error";
 
-/** Drives the Companion mic button: record -> upload -> play the reply.
- * One MediaRecorder session per turn; `sessionId` persists across turns
- * within a page visit so conversation_history groups them together. */
-export function useVoiceCompanion() {
-  const { profile } = usePrimaryBusinessProfile();
-  const [state, setState] = useState<VoiceState>("idle");
-  const [result, setResult] = useState<VoiceConverseResponse | null>(null);
+/** Drives a plain "record -> transcript text" mic button — no business
+ * profile, no AI reply, no TTS playback. Used by Business Setup's Step 1
+ * (speak your story) before any business profile exists to converse
+ * against; see use-voice-companion.ts for the full Companion-page flow
+ * this deliberately doesn't replicate. */
+export function useVoiceTranscribe(onTranscript: (text: string) => void) {
+  const [state, setState] = useState<TranscribeState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
-  const sessionIdRef = useRef<string | undefined>(undefined);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -24,11 +22,6 @@ export function useVoiceCompanion() {
   }, []);
 
   const startRecording = useCallback(async () => {
-    if (!profile) {
-      setErrorMessage("Set up your business first so Sakhi knows who she's talking to.");
-      setState("error");
-      return;
-    }
     if (!navigator.mediaDevices?.getUserMedia) {
       setErrorMessage("This browser can't record audio.");
       setState("error");
@@ -56,7 +49,7 @@ export function useVoiceCompanion() {
       setState("error");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile]);
+  }, []);
 
   const stopRecording = useCallback(() => {
     if (recorderRef.current && recorderRef.current.state !== "inactive") {
@@ -66,7 +59,6 @@ export function useVoiceCompanion() {
   }, [stopStream]);
 
   async function handleRecordingComplete() {
-    if (!profile) return;
     const blob = new Blob(chunksRef.current, { type: "audio/webm" });
     chunksRef.current = [];
     if (blob.size === 0) {
@@ -74,30 +66,14 @@ export function useVoiceCompanion() {
       return;
     }
 
-    setState("processing");
+    setState("transcribing");
     try {
-      const response = await postVoiceConverse({
-        businessProfileId: profile.id,
-        audio: blob,
-        sessionId: sessionIdRef.current,
-      });
-      sessionIdRef.current = response.session_id;
-      setResult(response);
-
-      if (response.audio_base64) {
-        setState("speaking");
-        const audio = new Audio(
-          `data:audio/${response.audio_format};base64,${response.audio_base64}`,
-        );
-        audio.onended = () => setState("idle");
-        audio.onerror = () => setState("idle");
-        await audio.play();
-      } else {
-        setState("idle");
-      }
+      const response = await postVoiceTranscribe({ audio: blob });
+      onTranscript(response.transcript);
+      setState("idle");
     } catch (error) {
       setErrorMessage(
-        error instanceof ApiError ? error.message : "Sakhi couldn't respond — try again.",
+        error instanceof ApiError ? error.message : "Couldn't transcribe that — try again.",
       );
       setState("error");
     }
@@ -106,11 +82,9 @@ export function useVoiceCompanion() {
   return {
     state,
     isRecording: state === "recording",
-    isBusy: state === "processing" || state === "speaking",
-    result,
+    isBusy: state === "transcribing",
     errorMessage,
     startRecording,
     stopRecording,
-    hasProfile: !!profile,
   };
 }

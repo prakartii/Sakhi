@@ -15,6 +15,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     brand_assets,
+    business_memories,
     business_profiles,
     content_calendar_items,
     content_generation,
@@ -42,6 +43,12 @@ api_router.include_router(
     onboarding.router,
     prefix="/onboarding",
     tags=["onboarding"],
+)
+
+api_router.include_router(
+    business_memories.router,
+    prefix="/business-memories",
+    tags=["business-memories"],
 )
 
 api_router.include_router(

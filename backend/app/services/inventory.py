@@ -222,7 +222,11 @@ class InventoryService:
         self, inventory_id: uuid.UUID, payload: StockInRequest
     ) -> Inventory:
         item = await self.get(inventory_id)
-        quantity_before = item.current_quantity
+        # current_quantity comes back from psycopg as decimal.Decimal (it's a
+        # NUMERIC column) while payload.quantity is a plain float from
+        # Pydantic — mixing the two types in arithmetic raises TypeError, so
+        # normalize to float here, matching every schema's float contract.
+        quantity_before = float(item.current_quantity)
         quantity_after = quantity_before + payload.quantity
         try:
             await self._repo.update(item, {"current_quantity": quantity_after})
@@ -252,7 +256,9 @@ class InventoryService:
         self, inventory_id: uuid.UUID, payload: StockOutRequest
     ) -> Inventory:
         item = await self.get(inventory_id)
-        quantity_before = item.current_quantity
+        # See stock_in's comment: current_quantity is Decimal, payload.quantity
+        # is float — normalize before arithmetic.
+        quantity_before = float(item.current_quantity)
         quantity_after = quantity_before - payload.quantity
         if quantity_after < 0:
             logger.warning(
@@ -294,7 +300,9 @@ class InventoryService:
         """Sets stock to an absolute value (e.g. after a physical count),
         as opposed to stock_in/stock_out's relative +/- quantity."""
         item = await self.get(inventory_id)
-        quantity_before = item.current_quantity
+        # See stock_in's comment: current_quantity is Decimal, new_quantity
+        # is float — normalize before arithmetic.
+        quantity_before = float(item.current_quantity)
         quantity_after = payload.new_quantity
         await self._repo.update(item, {"current_quantity": quantity_after})
         await self._record_movement(

@@ -1,4 +1,4 @@
-"""Request/response schemas for POST /voice/converse."""
+"""Request/response schemas for POST /voice/converse and POST /voice/transcribe."""
 
 import uuid
 from datetime import datetime
@@ -29,3 +29,9 @@ class VoiceConverseResponse(BaseModel):
     sources: list[str]
     audio_base64: str | None
     audio_format: str
+
+
+class TranscribeResponse(BaseModel):
+    transcript: str
+    detected_language: str | None
+    confidence: float | None

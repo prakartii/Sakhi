@@ -1,6 +1,7 @@
-import { Link } from "@tanstack/react-router";
-import { Globe, Mic, ChevronDown, Sparkles } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Globe, LogOut, Mic, ChevronDown, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
+import { useAuth } from "@/hooks/use-auth";
 
 const NAV = [
   { to: "/", label: "Companion" },
@@ -25,6 +26,14 @@ const GROW_NAV = [
 ] as const;
 
 export function SiteHeader() {
+  const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleSignOut() {
+    await signOut();
+    navigate({ to: "/login" });
+  }
+
   return (
     <header className="sticky top-0 z-40 border-b border-clay/20 bg-ivory/85 backdrop-blur-md">
       <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-3 lg:grid-cols-[auto_minmax(0,1fr)_auto]">
@@ -71,15 +80,28 @@ export function SiteHeader() {
           <button className="hidden items-center gap-1.5 rounded-full border border-clay/30 bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-wine/30 hover:text-wine sm:flex">
             <Globe className="h-3.5 w-3.5" /> English <ChevronDown className="h-3 w-3" />
           </button>
+          {!loading && user ? (
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="flex items-center gap-1.5 rounded-full border border-clay/30 bg-card px-3.5 py-2 text-xs font-medium text-foreground transition-colors hover:border-wine/30 hover:text-wine"
+            >
+              <LogOut className="h-3.5 w-3.5" /> Logout
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className="rounded-full border border-clay/30 bg-card px-3.5 py-2 text-xs font-medium text-foreground transition-colors hover:border-wine/30 hover:text-wine"
+            >
+              Login
+            </Link>
+          )}
           <Link
-            to="/login"
-            className="rounded-full border border-clay/30 bg-card px-3.5 py-2 text-xs font-medium text-foreground transition-colors hover:border-wine/30 hover:text-wine"
+            to="/"
+            className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
           >
-            Login
-          </Link>
-          <button className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5">
             <Mic className="h-3.5 w-3.5" /> Talk to Sakhi
-          </button>
+          </Link>
         </div>
       </div>
       <div className="thread opacity-40" />

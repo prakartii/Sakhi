@@ -1,153 +1,194 @@
+import { useState, type SyntheticEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Clock, Package, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
+import { Clock, Loader2, Package, ShieldCheck } from "lucide-react";
 import { Page } from "@/components/sakhi/Layout";
-import { MicPanel } from "@/components/sakhi/MicPanel";
+import { RequireAuth, RequireBusinessProfile } from "@/components/sakhi/RouteGuards";
 import { Reveal } from "@/components/sakhi/Reveal";
-import {
-  Action,
-  Basis,
-  Craft,
-  Eyebrow,
-  HandNote,
-  Meter,
-  Pill,
-  Why,
-} from "@/components/sakhi/Cards";
+import { Action, Basis, Craft, Eyebrow, Hero, Meter, Pill } from "@/components/sakhi/Cards";
 import { IconBadge } from "@/components/sakhi/CompanionAssets";
+import {
+  useCreateInventoryItem,
+  useInventoryList,
+  useInventorySummary,
+  useStockAction,
+} from "@/hooks/use-inventory";
+import { ApiError } from "@/lib/api-client";
+import type { InventoryItem } from "@/lib/types";
 
 export const Route = createFileRoute("/inventory")({
   head: () => ({
     meta: [
-      { title: "Smart Inventory — you counted your stock out loud" },
+      { title: "Smart Inventory — Sakhi" },
       {
         name: "description",
         content:
-          "Every bought 100, sold 72 becomes a date — the day you run out, and the day to reorder before it.",
-      },
-      { property: "og:title", content: "Smart Inventory — Sakhi did the rest" },
-      {
-        property: "og:description",
-        content: "Voice-logged stock turned into reorder dates and protected revenue.",
+          "Every product you stock, with reorder levels and stock value tracked automatically.",
       },
     ],
   }),
-  component: Inventory,
+  component: InventoryRoute,
 });
 
-const ITEMS = [
-  {
-    name: "Indigo block-print base cloth",
-    quote: "&ldquo;100 metre khareeda, 72 metre stock re raya.&rdquo;",
-    line: "Bought 100 · used 72 · 28 metres left",
-    pct: 28,
-    pills: [
-      { text: "Runs out in ~8 days", tone: "rose" as const },
-      { text: "₹11,200 of promised orders at risk", tone: "marigold" as const },
-    ],
-    why: "5.1 metres a day since 3 July, and Rakhi orders will push it to 6.4 — that's a stockout on 4 August.",
-    tone: "cream" as const,
-    span: "lg:col-span-7",
-  },
-  {
-    name: "Finished dupattas (ready to ship)",
-    quote: "&ldquo;Aaj 12 bache, 1 aur bana.&rdquo;",
-    line: "Bought 64 · used 51 · 13 pieces left",
-    pct: 20,
-    pills: [
-      { text: "Runs out in ~5 days", tone: "rose" as const },
-      { text: "Incl. ₹8,900 in invoiced Rakhi sales", tone: "marigold" as const },
-    ],
-    why: "You sell 3 a day normally, but festival weeks have run at 7 a day for the last two years.",
-    tone: "sand" as const,
-    span: "lg:col-span-5",
-  },
-  {
-    name: "Natural indigo dye",
-    quote: "&ldquo;Rang 8 kilo saya tha, 2 bacha hai.&rdquo;",
-    line: "Bought 6 · used 4 · 2 kg left",
-    pct: 33,
-    pills: [
-      { text: "Runs out in ~14 days", tone: "indigo" as const },
-      { text: "Comfortable — order in 5 days", tone: "leaf" as const },
-    ],
-    why: "Usage is steady at ₹410 per metre dyed; Bagru delivery takes 9 days, so order by 5 August.",
-    tone: "indigo" as const,
-    span: "lg:col-span-5",
-  },
-  {
-    name: "Gift packaging boxes",
-    quote: "&ldquo;Dabbe khatam hone wale hain.&rdquo;",
-    line: "Bought 150 · used 132 · 18 boxes left",
-    pct: 12,
-    pills: [
-      { text: "Runs out in ~4 days", tone: "rose" as const },
-      { text: "Blocks the ₹18,000 bundle plan", tone: "marigold" as const },
-    ],
-    why: "The ₹899 Rakhi bundle needs one box per order — 14 confirmed orders leave you 4 short.",
-    tone: "rose" as const,
-    span: "lg:col-span-7",
-  },
-];
+function InventoryRoute() {
+  return (
+    <RequireAuth>
+      <RequireBusinessProfile redirectWhen="missing" redirectTo="/business-setup">
+        <Inventory />
+      </RequireBusinessProfile>
+    </RequireAuth>
+  );
+}
 
-const STATS = [
-  {
-    label: "Items tracked by voice",
-    value: "11",
-    sub: "no forms, no typing",
-    icon: Package,
-    tone: "indigo" as const,
-  },
-  {
-    label: "Nearest stockout",
-    value: "4 days",
-    sub: "gift packaging boxes",
-    icon: Clock,
-    tone: "rose" as const,
-  },
-  {
-    label: "Revenue protected",
-    value: "₹35,000",
-    sub: "if all 4 reorders go out this week",
-    icon: ShieldCheck,
-    tone: "leaf" as const,
-  },
-];
+function stockPercent(item: InventoryItem): number {
+  const ceiling = Math.max(item.reorder_level * 2, item.current_quantity, 1);
+  return Math.round((item.current_quantity / ceiling) * 100);
+}
+
+function ItemCard({ item }: { item: InventoryItem }) {
+  const stockAction = useStockAction(item.id);
+  const pct = stockPercent(item);
+  const isLow = item.current_quantity <= item.reorder_level;
+  const isOut = item.current_quantity <= 0;
+
+  function adjust(direction: "in" | "out") {
+    stockAction.mutate(
+      { direction, quantity: 1 },
+      {
+        onError: (error) =>
+          toast.error(error instanceof ApiError ? error.message : "Couldn't update stock"),
+      },
+    );
+  }
+
+  return (
+    <Craft tone={isOut ? "rose" : isLow ? "marigold" : "cream"} className="h-full">
+      <h3 className="font-display text-xl font-semibold">{item.item_name}</h3>
+      <p className="mt-1 text-[12.5px] text-foreground/70">
+        {item.current_quantity} {item.unit} on hand · reorder at {item.reorder_level} {item.unit}
+      </p>
+      <Meter value={pct} tone={isLow ? "wine" : "clay"} />
+      <div className="mt-3 flex flex-wrap gap-2">
+        {isOut && <Pill tone="rose">Out of stock</Pill>}
+        {!isOut && isLow && <Pill tone="marigold">Low stock — reorder soon</Pill>}
+        {item.selling_price != null && <Pill tone="indigo">₹{item.selling_price} each</Pill>}
+      </div>
+      <Basis>
+        {item.unit_cost != null
+          ? `Stock value at cost: ₹${(item.unit_cost * item.current_quantity).toLocaleString("en-IN")}`
+          : "No cost recorded for this item."}
+      </Basis>
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          onClick={() => adjust("in")}
+          disabled={stockAction.isPending}
+          className="rounded-full border border-clay/25 px-3 py-1.5 text-[11.5px] font-medium text-foreground/75 transition-colors hover:border-wine/30 hover:text-wine disabled:opacity-60"
+        >
+          +1 stock in
+        </button>
+        <button
+          type="button"
+          onClick={() => adjust("out")}
+          disabled={stockAction.isPending || item.current_quantity <= 0}
+          className="rounded-full border border-clay/25 px-3 py-1.5 text-[11.5px] font-medium text-foreground/75 transition-colors hover:border-wine/30 hover:text-wine disabled:opacity-60"
+        >
+          −1 stock out
+        </button>
+      </div>
+    </Craft>
+  );
+}
+
+function AddItemForm() {
+  const createItem = useCreateInventoryItem();
+  const [name, setName] = useState("");
+  const [quantity, setQuantity] = useState("");
+
+  function handleSubmit(e: SyntheticEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    createItem.mutate(
+      { item_name: name.trim(), current_quantity: quantity ? Number(quantity) : 0 },
+      {
+        onSuccess: () => {
+          toast.success(`${name.trim()} added to inventory`);
+          setName("");
+          setQuantity("");
+        },
+        onError: (error) =>
+          toast.error(error instanceof ApiError ? error.message : "Couldn't add item"),
+      },
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-4 flex flex-wrap gap-2">
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Product name"
+        className="min-w-0 flex-1 rounded-xl border border-clay/25 bg-card px-3.5 py-2 text-[13.5px] shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-wine/30"
+      />
+      <input
+        value={quantity}
+        onChange={(e) => setQuantity(e.target.value)}
+        placeholder="Starting stock"
+        type="number"
+        min={0}
+        className="w-32 rounded-xl border border-clay/25 bg-card px-3.5 py-2 text-[13.5px] shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-wine/30"
+      />
+      <button
+        type="submit"
+        disabled={createItem.isPending}
+        className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-70"
+      >
+        {createItem.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+        Add product
+      </button>
+    </form>
+  );
+}
 
 function Inventory() {
+  const { data, isLoading } = useInventoryList();
+  const { data: summary } = useInventorySummary();
+  const items = data?.items ?? [];
+
+  const STATS = [
+    {
+      label: "Products tracked",
+      value: String(summary?.total_products ?? 0),
+      sub: "across your inventory",
+      icon: Package,
+      tone: "indigo" as const,
+    },
+    {
+      label: "Low or out of stock",
+      value: String((summary?.low_stock_count ?? 0) + (summary?.out_of_stock_count ?? 0)),
+      sub: "need a reorder soon",
+      icon: Clock,
+      tone: "rose" as const,
+    },
+    {
+      label: "Stock value",
+      value: `₹${(summary?.total_stock_value ?? 0).toLocaleString("en-IN")}`,
+      sub: "at cost, right now",
+      icon: ShieldCheck,
+      tone: "leaf" as const,
+    },
+  ];
+
   return (
     <Page>
-      <section className="grid items-center gap-10 py-14 lg:grid-cols-[1.15fr_0.85fr]">
+      <section className="py-14 lg:py-16">
         <Reveal>
-          <div className="relative">
-            <span className="inline-block rounded-full bg-sand px-3.5 py-1.5 text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-              Smart inventory
-            </span>
-            <h1 className="mt-6 font-display font-semibold tracking-tight text-foreground">
-              <span className="block text-3xl sm:text-4xl">You counted your</span>
-              <span className="block text-4xl sm:text-5xl">stock out loud.</span>
-              <span className="block text-5xl text-[oklch(0.45_0.13_255)] italic sm:text-6xl">
-                Sakhi did the rest.
-              </span>
-            </h1>
-            <p className="mt-6 max-w-md text-[15px] leading-relaxed font-light text-muted-foreground sm:text-base">
-              Every bought 100, sold 72 becomes a date — the day you run out, and the day to reorder
-              before it.
-            </p>
-          </div>
-        </Reveal>
-        <Reveal delay={120}>
-          <div className="card-soft lift relative mx-auto flex w-full max-w-sm overflow-hidden rounded-[1.75rem]">
-            <div className="flex w-9 shrink-0 flex-col items-center justify-center gap-2.5 border-r border-dashed border-clay/40 bg-sand">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <span key={i} className="h-1 w-1 rounded-full bg-[oklch(0.45_0.13_255)]/50" />
-              ))}
-            </div>
-            <MicPanel
-              title="Update stock"
-              quote="&ldquo;Aaj 12 bache.&rdquo;"
-              className="!rounded-none !border-0 !shadow-none flex-1"
-            />
-          </div>
+          <Hero
+            eyebrow="Smart inventory"
+            title="Every product,"
+            accent="tracked in one place."
+            copy="Stock levels, reorder points and stock value — updated the moment you log a sale or restock."
+          />
         </Reveal>
       </section>
 
@@ -168,71 +209,29 @@ function Inventory() {
         ))}
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-12">
-        {ITEMS.map((it, i) => (
-          <Reveal key={it.name} delay={i * 80} className={it.span}>
-            <Craft tone={it.tone} texture={i % 2 === 0 ? "weave" : "blockprint"} className="h-full">
-              <h3 className="font-display text-xl font-semibold">{it.name}</h3>
-              <p className="hand mt-1" dangerouslySetInnerHTML={{ __html: it.quote }} />
-              <p className="mt-2 text-[12.5px] text-foreground/70">{it.line}</p>
-              <Meter value={it.pct} tone={it.pct < 25 ? "wine" : "clay"} />
-              <div className="mt-3 flex flex-wrap gap-2">
-                {it.pills.map((p) => (
-                  <Pill key={p.text} tone={p.tone}>
-                    {p.text}
-                  </Pill>
-                ))}
-              </div>
-              <Why>{it.why}</Why>
-              <Basis />
-              <Action>Reorder now</Action>
-            </Craft>
-          </Reveal>
-        ))}
+      <section className="py-4">
+        <Reveal>
+          <Eyebrow>Add a product</Eyebrow>
+          <AddItemForm />
+        </Reveal>
       </section>
 
       <section className="mt-6 grid gap-5 lg:grid-cols-2">
-        <Reveal>
-          <Craft tone="marigold" className="h-full">
-            <Eyebrow>Restock reminders</Eyebrow>
-            <h3 className="mt-2 font-display text-xl font-semibold">
-              Three calls to make this week
-            </h3>
-            <ul className="mt-3 space-y-2 text-[12.5px] text-foreground/75">
-              <li>Mon · Packaging supplier, Johari Bazaar — 200 boxes, ₹3,400</li>
-              <li>Wed · Bagru dyer — 40 metres indigo cloth, ₹9,200 (9-day lead)</li>
-              <li>Fri · Sanganer backup dyer — first trial order, 10 metres</li>
-            </ul>
-            <Why>
-              The Friday trial order costs ₹2,300 and removes the single supplier risk that has
-              already cost you ₹27,000 in slipped orders.
-            </Why>
-            <Basis />
-          </Craft>
-        </Reveal>
-
-        <Reveal delay={90}>
-          <Craft tone="rose" texture="weave" className="h-full">
-            <Eyebrow>Festival demand plan</Eyebrow>
-            <h3 className="mt-2 font-display text-xl font-semibold">
-              Rakhi in 18 days · Diwali in 96
-            </h3>
-            <p className="mt-2 text-[13px] text-foreground/75">
-              Hold back 30 finished dupattas for Rakhi week and keep 30 metres of cloth in reserve —
-              last Rakhi you sold ₹38,000 and turned away 7 buyers.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Pill tone="leaf">Last Rakhi: ₹38,000 in 7 days</Pill>
-              <Pill tone="marigold">7 buyers turned away</Pill>
-            </div>
-            <Why>
-              Your festival curve runs 2.2× a normal week and starts 10 days before the date — stock
-              bought after 30 July will arrive too late to sell.
-            </Why>
-            <Basis />
-            <HandNote>Last year you ran out on day four. This year you already know.</HandNote>
-          </Craft>
-        </Reveal>
+        {isLoading ? (
+          <div className="col-span-full flex justify-center py-14">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : items.length === 0 ? (
+          <div className="card-soft col-span-full rounded-2xl px-6 py-10 text-center text-sm text-muted-foreground">
+            No products yet — add your first one above.
+          </div>
+        ) : (
+          items.map((item, i) => (
+            <Reveal key={item.id} delay={i * 60}>
+              <ItemCard item={item} />
+            </Reveal>
+          ))
+        )}
       </section>
     </Page>
   );

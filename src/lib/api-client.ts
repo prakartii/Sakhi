@@ -1,8 +1,7 @@
 import { supabase } from "@/lib/supabase-client";
 
 const API_BASE_URL =
-  (import.meta.env["VITE_API_BASE_URL"] as string | undefined) ??
-  "http://localhost:8000/api/v1";
+  (import.meta.env["VITE_API_BASE_URL"] as string | undefined) ?? "http://localhost:8000/api/v1";
 
 export class ApiError extends Error {
   status: number;
@@ -135,6 +134,41 @@ export async function postVoiceConverse(params: {
     throw new ApiError(response.status, message, data);
   }
   return data as VoiceConverseResponse;
+}
+
+export interface VoiceTranscribeResponse {
+  transcript: string;
+  detected_language: string | null;
+  confidence: number | null;
+}
+
+/** STT-only upload — no business profile needed, used by Business Setup's
+ * mic button to fill the story textarea before any profile exists. */
+export async function postVoiceTranscribe(params: {
+  audio: Blob;
+  language?: string | undefined;
+}): Promise<VoiceTranscribeResponse> {
+  const form = new FormData();
+  form.append("language", params.language ?? "en-IN");
+  form.append("audio", params.audio, "recording.webm");
+
+  const headers = await authHeaders();
+  const response = await fetch(`${API_BASE_URL}/voice/transcribe`, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+
+  const text = await response.text();
+  const data: unknown = text ? JSON.parse(text) : undefined;
+  if (!response.ok) {
+    const message =
+      (data && typeof data === "object" && "detail" in data
+        ? String((data as { detail: unknown }).detail)
+        : undefined) ?? `Request failed with status ${response.status}`;
+    throw new ApiError(response.status, message, data);
+  }
+  return data as VoiceTranscribeResponse;
 }
 
 export const api = {

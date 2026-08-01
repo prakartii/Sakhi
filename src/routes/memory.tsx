@@ -1,9 +1,11 @@
+import { useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { BookOpen, Clock, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import { BookOpen, Loader2, Sparkles } from "lucide-react";
 import { Page } from "@/components/sakhi/Layout";
+import { RequireAuth, RequireBusinessProfile } from "@/components/sakhi/RouteGuards";
 import { MicPanel } from "@/components/sakhi/MicPanel";
 import { Reveal } from "@/components/sakhi/Reveal";
-import { Basis, Craft, Eyebrow, HandNote, Pill, Why } from "@/components/sakhi/Cards";
+import { Basis, Craft, Eyebrow, HandNote, Pill } from "@/components/sakhi/Cards";
 import { BotanicalMark, SpiralEdge } from "@/components/sakhi/CompanionAssets";
 import { MemoryCard, StatusPill, StickyNote, TrustChip } from "@/components/sakhi/CompanionHero";
 import {
@@ -12,92 +14,74 @@ import {
   MemoryDot,
   PostageStamp,
 } from "@/components/sakhi/MemoryAssets";
+import { useBusinessMemories } from "@/hooks/use-memories";
+import type { BusinessMemory } from "@/lib/types";
 
 export const Route = createFileRoute("/memory")({
   head: () => ({
     meta: [
-      { title: "Business Memory — Sakhi remembers what your business taught you" },
+      { title: "Business Memory — Sakhi" },
       {
         name: "description",
         content:
-          "Every moment you've spoken about — priced, delayed, ordered, asked — kept in one timeline, tied to what it did to your money.",
-      },
-      { property: "og:title", content: "Business Memory — Sakhi" },
-      {
-        property: "og:description",
-        content: "One timeline of every voice moment, tied to rupees.",
+          "Every moment you've spoken about — kept in one timeline, extracted automatically from your voice check-ins.",
       },
     ],
   }),
-  component: Memory,
+  component: MemoryRoute,
 });
 
-const MOMENTS = [
-  {
-    date: "12 June · Price change",
-    title: "Raised dupatta price ₹640 → ₹820",
-    quote: "&ldquo;Kapda mehnga ho gaya, daam badha rahe hain.&rdquo;",
-    pill: { text: "Sales +27% · margin ₹138 → ₹176", tone: "leaf" as const },
-    why: "Buyers in Jaipur's craft market read hand-block work above ₹800 as premium; your repeat rate did not drop in the 6 weeks after.",
-  },
-  {
-    date: "24 June · Supplier delay",
-    title: "Indigo dye lot from Bagru delayed 9 days",
-    quote: "&ldquo;Rangwala bola na hi 10 late ker dhiya.&rdquo;",
-    pill: { text: "₹9,400 of orders slipped to July", tone: "rose" as const },
-    why: "This is the third delay from the same dyer in 4 months — each one has cost you between ₹7,000 and ₹11,000 in slipped orders.",
-  },
-  {
-    date: "2 July · Bulk order",
-    title: "Bengaluru boutique ordered 40 dupattas",
-    quote: "&ldquo;Bada order aaya hai, 40 piece.&rdquo;",
-    pill: { text: "₹32,800 · ₹9,700 still pending", tone: "marigold" as const },
-    why: "Your first order above ₹30,000. Six months of consistent invoices is what a lender looks for — this one moved you into loan range.",
-  },
-  {
-    date: "8 July · Enquiry",
-    title: "5 enquiries for Rakhi gift sets",
-    quote: "&ldquo;Log rakhi ke liye do-do maang rahe hain.&rdquo;",
-    pill: { text: "Est. ₹15,000 if bundled at ₹899", tone: "indigo" as const },
-    why: "Paired enquiries jumped from 1/week to 5/week — the same shape as last year's pre-Rakhi curve.",
-  },
-  {
-    date: "16 July · Cost",
-    title: "Cotton base cloth up ₹28/metre",
-    quote: "&ldquo;Kapda phir mehnga hua.&rdquo;",
-    pill: { text: "Cost per piece +₹62", tone: "marigold" as const },
-    why: "Your expenses are now growing faster than sales; at this rate the June price gain is gone by September unless you adjust again.",
-  },
-];
+function MemoryRoute() {
+  return (
+    <RequireAuth>
+      <RequireBusinessProfile redirectWhen="missing" redirectTo="/business-setup">
+        <Memory />
+      </RequireBusinessProfile>
+    </RequireAuth>
+  );
+}
 
-const INSIGHTS = [
-  {
-    label: "Moments remembered",
-    value: "47",
-    sub: "across 19 voice check-ins",
-    icon: Sparkles,
-  },
-  {
-    label: "Best decision so far",
-    value: "₹18,600",
-    sub: "extra revenue from the June price change",
-    icon: TrendingUp,
-  },
-  {
-    label: "Costliest pattern",
-    value: "₹27,000",
-    sub: "lost to one supplier's repeat delays",
-    icon: TrendingDown,
-  },
-  {
-    label: "Cash still owed to you",
-    value: "₹9,700",
-    sub: "one buyer, 21 days overdue",
-    icon: Clock,
-  },
-];
+const TYPE_TONE: Record<BusinessMemory["memory_type"], "rose" | "leaf" | "marigold" | "indigo"> = {
+  fact: "indigo",
+  milestone: "marigold",
+  goal: "leaf",
+  challenge: "rose",
+  preference: "indigo",
+  note: "indigo",
+  decision: "leaf",
+};
+
+function formatDate(value: string | null): string {
+  if (!value) return "Undated";
+  return new Date(value).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 function Memory() {
+  const { data, isLoading } = useBusinessMemories();
+  const memories = data?.items ?? [];
+
+  const insights = useMemo(() => {
+    if (memories.length === 0) return null;
+    const counts = new Map<string, number>();
+    let importanceSum = 0;
+    for (const m of memories) {
+      counts.set(m.memory_type, (counts.get(m.memory_type) ?? 0) + 1);
+      importanceSum += m.importance_score;
+    }
+    const topType = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+    const latest = memories[0];
+    return {
+      total: memories.length,
+      avgImportance: (importanceSum / memories.length).toFixed(1),
+      topType: topType ? `${topType[0]} (${topType[1]})` : "—",
+      latest,
+    };
+  }, [memories]);
+
   return (
     <Page>
       <section className="relative overflow-hidden py-14 lg:py-20">
@@ -119,13 +103,13 @@ function Memory() {
               </h1>
 
               <p className="relative mt-6 max-w-md text-[15px] leading-relaxed font-light text-muted-foreground sm:text-base">
-                Every moment you've spoken about — priced, delayed, ordered, asked — kept in one
-                timeline, each tied to what it did to your money.
+                Every moment you've spoken about with Sakhi — extracted automatically and kept in
+                one timeline.
               </p>
 
               <div className="relative mt-7 flex flex-wrap gap-2.5">
                 <TrustChip>One timeline</TrustChip>
-                <TrustChip>Tied to your money</TrustChip>
+                <TrustChip>Extracted from your voice</TrustChip>
                 <TrustChip>Never re-typed</TrustChip>
               </div>
 
@@ -145,9 +129,9 @@ function Memory() {
                 rotate={-3}
                 className="relative z-20 mb-4 lg:absolute lg:top-0 lg:-left-8 lg:mb-0"
               >
-                <p className="text-xl leading-none font-semibold">47</p>
+                <p className="text-xl leading-none font-semibold">{insights?.total ?? 0}</p>
                 <p className="mt-1 text-[11px] font-normal text-foreground/60">
-                  moments, 19 check-ins
+                  moments remembered
                 </p>
               </MemoryCard>
 
@@ -156,7 +140,9 @@ function Memory() {
                 rotate={2}
                 className="relative z-20 mb-4 w-fit lg:absolute lg:top-3 lg:-right-4 lg:mb-0"
               >
-                Latest: price raised to ₹820
+                {insights?.latest
+                  ? `Latest: ${insights.latest.title ?? insights.latest.memory_type}`
+                  : "Talk to Sakhi to begin"}
               </StatusPill>
 
               <div className="relative">
@@ -178,14 +164,6 @@ function Memory() {
                 />
                 <PostageStamp rotate={7} className="absolute -right-4 -bottom-5 z-20 h-12 w-10" />
               </div>
-
-              <StatusPill
-                tone="indigo"
-                rotate={-2}
-                className="relative z-20 mt-4 ml-auto w-fit lg:absolute lg:-bottom-4 lg:left-10 lg:mt-0"
-              >
-                8 weeks of memory kept
-              </StatusPill>
             </div>
           </Reveal>
         </div>
@@ -203,23 +181,38 @@ function Memory() {
             aria-hidden
             className="absolute top-4 bottom-4 -left-1 hidden w-px bg-[repeating-linear-gradient(180deg,color-mix(in_oklab,var(--clay)_55%,transparent)_0_8px,transparent_8px_16px)] lg:block"
           />
-          {MOMENTS.map((m, i) => (
-            <Reveal key={m.title} delay={i * 70}>
-              <Craft tone={i === 0 ? "sand" : "cream"} texture={i === 0 ? "weave" : undefined}>
-                <div className="flex items-center gap-2">
-                  <MemoryDot tone={m.pill.tone} />
-                  <Eyebrow>{m.date}</Eyebrow>
-                </div>
-                <h3 className="mt-1.5 font-display text-xl font-semibold">{m.title}</h3>
-                <p className="hand mt-1" dangerouslySetInnerHTML={{ __html: m.quote }} />
-                <div className="mt-3">
-                  <Pill tone={m.pill.tone}>{m.pill.text}</Pill>
-                </div>
-                <Why>{m.why}</Why>
-                <Basis />
-              </Craft>
-            </Reveal>
-          ))}
+          {isLoading ? (
+            <div className="flex justify-center py-14">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : memories.length === 0 ? (
+            <Craft tone="sand">
+              <p className="text-[13px] text-foreground/75">
+                No memories yet — talk to Sakhi on the Companion page and she'll start remembering
+                the moments that matter for your business.
+              </p>
+            </Craft>
+          ) : (
+            memories.map((m, i) => (
+              <Reveal key={m.id} delay={i * 70}>
+                <Craft tone={i === 0 ? "sand" : "cream"} texture={i === 0 ? "weave" : undefined}>
+                  <div className="flex items-center gap-2">
+                    <MemoryDot tone={TYPE_TONE[m.memory_type]} />
+                    <Eyebrow>{formatDate(m.occurred_at ?? m.created_at)}</Eyebrow>
+                  </div>
+                  <h3 className="mt-1.5 font-display text-xl font-semibold">
+                    {m.title ?? m.memory_type}
+                  </h3>
+                  <p className="mt-1 text-[13px] text-foreground/75">{m.content}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Pill tone={TYPE_TONE[m.memory_type]}>{m.memory_type}</Pill>
+                    <Pill>Importance {m.importance_score}/5</Pill>
+                  </div>
+                  <Basis>Extracted from a {m.source} conversation.</Basis>
+                </Craft>
+              </Reveal>
+            ))
+          )}
         </div>
 
         <Reveal delay={100}>
@@ -230,29 +223,46 @@ function Memory() {
           >
             <BotanicalMark className="pointer-events-none absolute -top-6 -right-8 h-32 w-28 opacity-[0.1]" />
             <Eyebrow>Memory insights</Eyebrow>
-            <h3 className="mt-2 font-display text-xl font-semibold">What 8 weeks of memory says</h3>
-            <div className="mt-4 space-y-3">
-              {INSIGHTS.map((s) => (
-                <div
-                  key={s.label}
-                  className="flex items-start gap-3 rounded-2xl border border-clay/20 bg-card/80 px-4 py-3 transition-transform hover:-translate-y-0.5"
-                >
+            <h3 className="mt-2 font-display text-xl font-semibold">What your memory says</h3>
+            {insights ? (
+              <div className="mt-4 space-y-3">
+                <div className="flex items-start gap-3 rounded-2xl border border-clay/20 bg-card/80 px-4 py-3">
                   <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-lilac ring-1 ring-clay/20">
-                    <s.icon className="h-3.5 w-3.5 text-wine" />
+                    <Sparkles className="h-3.5 w-3.5 text-wine" />
                   </span>
                   <div className="min-w-0">
-                    <Eyebrow>{s.label}</Eyebrow>
-                    <p className="mt-1 font-display text-xl font-semibold">{s.value}</p>
-                    <p className="text-[11px] text-muted-foreground">{s.sub}</p>
+                    <Eyebrow>Moments remembered</Eyebrow>
+                    <p className="mt-1 font-display text-xl font-semibold">{insights.total}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-            <Why>
-              Two of your five biggest revenue swings trace back to one dyer in Bagru. Adding a
-              second one is worth more to you this quarter than any new product.
-            </Why>
-            <Basis />
+                <div className="flex items-start gap-3 rounded-2xl border border-clay/20 bg-card/80 px-4 py-3">
+                  <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-lilac ring-1 ring-clay/20">
+                    <Sparkles className="h-3.5 w-3.5 text-wine" />
+                  </span>
+                  <div className="min-w-0">
+                    <Eyebrow>Most common type</Eyebrow>
+                    <p className="mt-1 font-display text-xl font-semibold capitalize">
+                      {insights.topType}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 rounded-2xl border border-clay/20 bg-card/80 px-4 py-3">
+                  <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-lilac ring-1 ring-clay/20">
+                    <Sparkles className="h-3.5 w-3.5 text-wine" />
+                  </span>
+                  <div className="min-w-0">
+                    <Eyebrow>Average importance</Eyebrow>
+                    <p className="mt-1 font-display text-xl font-semibold">
+                      {insights.avgImportance} / 5
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-4 text-[12.5px] text-muted-foreground">
+                Insights appear once Sakhi has remembered a few things about your business.
+              </p>
+            )}
             <HandNote>Your memory isn't nostalgia — it's working for you.</HandNote>
           </Craft>
         </Reveal>

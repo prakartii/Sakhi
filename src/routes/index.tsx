@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Heart, Landmark, Package, PartyPopper, TriangleAlert } from "lucide-react";
+import { Heart, Sparkles } from "lucide-react";
 import { Page } from "@/components/sakhi/Layout";
 import { Reveal } from "@/components/sakhi/Reveal";
 import { BotanicalMark, ScrapbookBleed, StitchDivider } from "@/components/sakhi/CompanionAssets";
@@ -14,6 +15,21 @@ import { FeaturedMetric, NoteMetric, TicketMetric } from "@/components/sakhi/Com
 import { MorningBriefing, type BriefingTask } from "@/components/sakhi/CompanionBriefing";
 import { Action, Basis, Craft, Eyebrow, Why } from "@/components/sakhi/Cards";
 import { useVoiceCompanion } from "@/hooks/use-voice-companion";
+import { useAuth } from "@/hooks/use-auth";
+import { usePrimaryBusinessProfile } from "@/hooks/use-business-profile";
+import { useAISummary, useInventorySummary } from "@/hooks/use-dashboard-data";
+import { useTransactions } from "@/hooks/use-transactions";
+import { useBusinessMemories } from "@/hooks/use-memories";
+
+const FOCUS_TONES: BriefingTask["tone"][] = ["rose", "leaf", "marigold", "indigo"];
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function thisMonthKey(): string {
+  return new Date().toISOString().slice(0, 7);
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -35,37 +51,59 @@ export const Route = createFileRoute("/")({
   component: Companion,
 });
 
-const TASKS: BriefingTask[] = [
-  {
-    text: "3 pending tasks — Meena's dupatta order ships today (₹4,200).",
-    tag: "Order",
-    tone: "rose",
-    icon: Package,
-  },
-  {
-    text: "New scheme match: PM Vishwakarma toolkit grant — 92% fit.",
-    tag: "Scheme",
-    tone: "indigo",
-    icon: Landmark,
-  },
-  {
-    text: "Rakhi is in 18 days — last year you sold ₹38,000 in that week.",
-    tag: "Festival",
-    tone: "marigold",
-    icon: PartyPopper,
-  },
-  {
-    text: "Low stock: indigo block-print fabric — 8 days left.",
-    tag: "Stock",
-    tone: "leaf",
-    icon: TriangleAlert,
-  },
-];
-
-const DEFAULT_QUOTE = "&ldquo;Aaj 12 dupatte beche, 3 hazaar ka kapda kharida.&rdquo;";
+const DEFAULT_QUOTE = "Tap the mic and tell Sakhi about today — an order, a price, anything.";
 
 function Companion() {
   const voice = useVoiceCompanion();
+  const { user, loading: authLoading } = useAuth();
+  const { profile, hasProfile } = usePrimaryBusinessProfile();
+  const aiSummary = useAISummary();
+  const transactions = useTransactions();
+  const memories = useBusinessMemories();
+  const inventorySummary = useInventorySummary();
+
+  const signedIn = !authLoading && !!user;
+
+  const { thisMonthNet, todaysSales, todaysOrderCount, pendingPayments, pendingBuyerCount } =
+    useMemo(() => {
+      const items = transactions.data?.items ?? [];
+      const month = thisMonthKey();
+      const today = todayISO();
+      let net = 0;
+      let salesToday = 0;
+      let ordersToday = 0;
+      let pending = 0;
+      let pendingBuyers = 0;
+      for (const t of items) {
+        const sign = t.transaction_type === "income" ? 1 : -1;
+        if (t.transaction_date.slice(0, 7) === month) net += sign * t.amount;
+        if (t.transaction_type === "income" && t.transaction_date === today) {
+          salesToday += t.amount;
+          ordersToday += 1;
+        }
+        if (t.transaction_type === "income" && t.status === "pending") {
+          pending += t.amount;
+          pendingBuyers += 1;
+        }
+      }
+      return {
+        thisMonthNet: net,
+        todaysSales: salesToday,
+        todaysOrderCount: ordersToday,
+        pendingPayments: pending,
+        pendingBuyerCount: pendingBuyers,
+      };
+    }, [transactions.data]);
+
+  const tasks: BriefingTask[] = (aiSummary.data?.highlights ?? []).map((highlight, i) => ({
+    text: highlight,
+    tag: "Insight",
+    tone: FOCUS_TONES[i % FOCUS_TONES.length]!,
+    icon: Sparkles,
+  }));
+
+  const latestMemory = memories.data?.items[0];
+  const insightCards = (aiSummary.data?.top_actions ?? []).slice(0, 2);
 
   const voiceCardProps = (() => {
     switch (voice.state) {
@@ -145,23 +183,31 @@ function Companion() {
 
           <Reveal delay={120}>
             <div className="relative mx-auto w-full max-w-md pt-4 lg:mx-0 lg:ml-auto lg:pt-10">
-              <MemoryCard
-                tone="leaf"
-                label="Today"
-                rotate={-3}
-                className="relative z-20 mb-4 lg:absolute lg:top-0 lg:-left-6 lg:mb-0"
-              >
-                <p className="text-xl leading-none font-semibold">₹6,480</p>
-                <p className="mt-1 text-[11px] font-normal text-foreground/60">4 orders in</p>
-              </MemoryCard>
+              {hasProfile && (
+                <MemoryCard
+                  tone="leaf"
+                  label="Today"
+                  rotate={-3}
+                  className="relative z-20 mb-4 lg:absolute lg:top-0 lg:-left-6 lg:mb-0"
+                >
+                  <p className="text-xl leading-none font-semibold">
+                    ₹{todaysSales.toLocaleString("en-IN")}
+                  </p>
+                  <p className="mt-1 text-[11px] font-normal text-foreground/60">
+                    {todaysOrderCount} {todaysOrderCount === 1 ? "order" : "orders"} in
+                  </p>
+                </MemoryCard>
+              )}
 
-              <StatusPill
-                tone="indigo"
-                rotate={2}
-                className="relative z-20 mb-4 lg:absolute lg:top-4 lg:-right-2 lg:mb-0"
-              >
-                PM Vishwakarma — 92% fit
-              </StatusPill>
+              {aiSummary.data?.highlights[0] && (
+                <StatusPill
+                  tone="indigo"
+                  rotate={2}
+                  className="relative z-20 mb-4 lg:absolute lg:top-4 lg:-right-2 lg:mb-0"
+                >
+                  {aiSummary.data.highlights[0]}
+                </StatusPill>
+              )}
 
               <VoiceCard
                 {...voiceCardProps}
@@ -172,13 +218,16 @@ function Companion() {
                 onMicClick={voice.isRecording ? voice.stopRecording : voice.startRecording}
               />
 
-              <StatusPill
-                tone="rose"
-                rotate={-2}
-                className="relative z-20 mt-4 ml-auto w-fit lg:absolute lg:-bottom-3 lg:left-6 lg:mt-0"
-              >
-                Low stock: indigo fabric
-              </StatusPill>
+              {inventorySummary.data && inventorySummary.data.low_stock_count > 0 && (
+                <StatusPill
+                  tone="rose"
+                  rotate={-2}
+                  className="relative z-20 mt-4 ml-auto w-fit lg:absolute lg:-bottom-3 lg:left-6 lg:mt-0"
+                >
+                  {inventorySummary.data.low_stock_count} item
+                  {inventorySummary.data.low_stock_count === 1 ? "" : "s"} low on stock
+                </StatusPill>
+              )}
             </div>
           </Reveal>
         </div>
@@ -186,115 +235,109 @@ function Companion() {
 
       <StitchDivider className="opacity-50" />
 
-      {/* ---------- Metrics : three personalities ---------- */}
-      <section className="grid gap-5 py-12 sm:grid-cols-12">
-        <Reveal className="sm:col-span-5" delay={0}>
-          <FeaturedMetric
-            label="This month net"
-            value="₹21,340"
-            tag="+18% vs June"
-            note="Across every order, sale and supplier payment you've logged this month."
-            className="h-full"
-          />
-        </Reveal>
-        <Reveal className="sm:col-span-4" delay={90}>
-          <TicketMetric
-            label="Today's sales"
-            value="₹6,480"
-            sub="4 orders"
-            detail="≈ ₹1,620 per order"
-            className="h-full"
-          />
-        </Reveal>
-        <Reveal className="sm:col-span-3" delay={180}>
-          <NoteMetric
-            label="Pending payments"
-            value="₹12,900"
-            sub="2 buyers"
-            detail="₹8,700 of it from the Bengaluru store"
-            className="h-full"
-          />
-        </Reveal>
-      </section>
+      {hasProfile && (
+        <>
+          {/* ---------- Metrics : three personalities ---------- */}
+          <section className="grid gap-5 py-12 sm:grid-cols-12">
+            <Reveal className="sm:col-span-5" delay={0}>
+              <FeaturedMetric
+                label="This month net"
+                value={`₹${thisMonthNet.toLocaleString("en-IN")}`}
+                note="Across every order, sale and supplier payment you've logged this month."
+                className="h-full"
+              />
+            </Reveal>
+            <Reveal className="sm:col-span-4" delay={90}>
+              <TicketMetric
+                label="Today's sales"
+                value={`₹${todaysSales.toLocaleString("en-IN")}`}
+                sub={`${todaysOrderCount} ${todaysOrderCount === 1 ? "order" : "orders"}`}
+                className="h-full"
+              />
+            </Reveal>
+            <Reveal className="sm:col-span-3" delay={180}>
+              <NoteMetric
+                label="Pending payments"
+                value={`₹${pendingPayments.toLocaleString("en-IN")}`}
+                sub={`${pendingBuyerCount} ${pendingBuyerCount === 1 ? "buyer" : "buyers"}`}
+                className="h-full"
+              />
+            </Reveal>
+          </section>
 
-      {/* ---------- Good morning : editorial intelligence board ---------- */}
-      <Reveal>
-        <MorningBriefing
-          time="7:10 AM"
-          place="Jaipur"
-          name="Kavita ji"
-          tasks={TASKS}
-          why="Each line is drawn from 19 voice check-ins you logged this month, matched against your own order and payment history — not generic advice."
-          basis="Based on what you've shared over the past 3 weeks."
-          note="You've logged 19 days in a row. That's a business, not a hobby."
-        />
-      </Reveal>
-
-      {/* ---------- Insight cards : distinct character each ---------- */}
-      <section className="mt-10 grid gap-5 lg:grid-cols-12">
-        <Reveal className="lg:col-span-4" delay={0}>
-          <Craft
-            tone="leaf"
-            className="relative h-full overflow-hidden rounded-tl-[2.5rem] rounded-br-[2.5rem] border-2 border-dashed border-leaf-ink/25"
-          >
-            <Eyebrow>Daily briefing</Eyebrow>
-            <h3 className="mt-2 font-display text-xl font-semibold">Yesterday closed at ₹5,120</h3>
-            <p className="mt-2 text-[13px] text-foreground/75">
-              12 dupattas sold · ₹5,120 in. Fabric purchase · ₹3,000 out.
-            </p>
-            <p className="mt-3 text-sm font-semibold">
-              Net for the day <span className="text-leaf-ink">₹2,120</span>
-            </p>
-            <Why>Margin per dupatta is ₹176 after the June price change — up from ₹138 in May.</Why>
-            <Basis />
-          </Craft>
-        </Reveal>
-
-        <Reveal className="lg:col-span-5" delay={110}>
-          <Craft
-            tone="rose"
-            className="relative h-full overflow-hidden rounded-tr-[2.5rem] rounded-bl-[2.5rem] border-2 border-dashed border-wine/15"
-          >
-            <BotanicalMark className="pointer-events-none absolute -top-6 -right-6 h-32 w-28 opacity-[0.12]" />
-            <Eyebrow>Smart suggestion</Eyebrow>
-            <h3 className="mt-2 font-display text-2xl font-semibold">Raise Rakhi bundle to ₹899</h3>
-            <p className="mt-2 text-[13px] text-foreground/75">
-              A 2-dupatta gift bundle at ₹899 could add about ₹14,000 over the festival fortnight.
-            </p>
-            <Why>
-              Last Rakhi, 61% of your buyers ordered two pieces together and none asked for a
-              discount.
-            </Why>
-            <Basis />
-            <Action>Create the bundle</Action>
-          </Craft>
-        </Reveal>
-
-        <Reveal className="lg:col-span-3" delay={220}>
-          <Craft
-            tone="marigold"
-            className="relative h-full rounded-[1.25rem] rounded-tl-[2.5rem] border-2 border-dashed border-wine/20"
-          >
-            <span
-              aria-hidden
-              className="absolute -top-2.5 left-6 h-4 w-4 rounded-full ring-2 ring-wine/30"
-              style={{ boxShadow: "0 1px 2px oklch(0.4 0.06 40 / 20%)" }}
+          {/* ---------- Good morning : editorial intelligence board ---------- */}
+          <Reveal>
+            <MorningBriefing
+              time={new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}
+              place={profile?.city ?? "your city"}
+              name={profile?.owner_name ?? profile?.business_name ?? "there"}
+              tasks={tasks}
+              why="Grounded in your own transactions, stock levels and voice check-ins — not generic advice."
+              basis="Based on what you've shared with Sakhi so far."
+              note={
+                memories.data
+                  ? `Sakhi remembers ${memories.data.total} thing${memories.data.total === 1 ? "" : "s"} about your business so far.`
+                  : "Talk to Sakhi and she'll start remembering things about your business."
+              }
             />
-            <Eyebrow>Upcoming reminders</Eyebrow>
-            <h3 className="mt-2 font-display text-xl font-semibold">4 things this week</h3>
-            <ul className="mt-3 space-y-2 text-[12.5px] text-foreground/75">
-              <li>Today · Ship Meena's order — ₹4,200</li>
-              <li>Wed · Follow up ₹8,700 payment from Bengaluru store</li>
-              <li>Fri · Reorder indigo fabric — 40 metres</li>
-              <li>Sun · Upload 6 Rakhi photos to marketplace</li>
-            </ul>
-            <Why>
-              These four were spoken by you, not typed — Sakhi keeps the dates you mentioned.
-            </Why>
-            <Basis />
+          </Reveal>
+
+          {/* ---------- Insight cards ---------- */}
+          <section className="mt-10 grid gap-5 lg:grid-cols-12">
+            {insightCards.map((action, i) => (
+              <Reveal key={action.action} className="lg:col-span-6" delay={i * 100}>
+                <Craft
+                  tone={i === 0 ? "leaf" : "rose"}
+                  className="relative h-full overflow-hidden rounded-tl-[2.5rem] rounded-br-[2.5rem] border-2 border-dashed border-leaf-ink/25"
+                >
+                  <Eyebrow>{i === 0 ? "Daily briefing" : "Smart suggestion"}</Eyebrow>
+                  <h3 className="mt-2 font-display text-xl font-semibold">{action.action}</h3>
+                  <Why>{action.why}</Why>
+                  <Basis />
+                  {i === 1 && <Action>See details</Action>}
+                </Craft>
+              </Reveal>
+            ))}
+
+            <Reveal className="lg:col-span-12" delay={200}>
+              <Craft
+                tone="marigold"
+                className="relative rounded-[1.25rem] rounded-tl-[2.5rem] border-2 border-dashed border-wine/20"
+              >
+                <Eyebrow>What Sakhi last heard</Eyebrow>
+                {latestMemory ? (
+                  <>
+                    <h3 className="mt-2 font-display text-xl font-semibold">
+                      {latestMemory.title ?? latestMemory.memory_type}
+                    </h3>
+                    <p className="mt-2 text-[13px] text-foreground/75">{latestMemory.content}</p>
+                    <Why>Spoken by you, not typed — Sakhi keeps what you tell her.</Why>
+                    <Basis />
+                  </>
+                ) : (
+                  <p className="mt-2 text-[13px] text-foreground/75">
+                    Nothing yet — tap the mic above and tell Sakhi about your business.
+                  </p>
+                )}
+              </Craft>
+            </Reveal>
+          </section>
+        </>
+      )}
+
+      {signedIn && !hasProfile && (
+        <Reveal>
+          <Craft tone="sand" className="mt-10">
+            <Eyebrow>Get started</Eyebrow>
+            <h3 className="mt-2 font-display text-xl font-semibold">
+              Tell Sakhi about your business
+            </h3>
+            <p className="mt-2 text-[13px] text-foreground/75">
+              Finish business setup and everything below will fill in with your own numbers.
+            </p>
           </Craft>
         </Reveal>
-      </section>
+      )}
     </Page>
   );
 }

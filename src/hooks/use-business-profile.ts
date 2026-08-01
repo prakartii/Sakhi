@@ -27,7 +27,11 @@ export function usePrimaryBusinessProfile(): {
   hasProfile: boolean;
 } {
   const query = useBusinessProfiles();
-  const items = query.data?.items ?? [];
+  // GET /business-profiles returns every status (including archived) unless
+  // filtered — an archived profile must never count as "the user's active
+  // business" or RequireBusinessProfile would never send them back to
+  // /business-setup to onboard a replacement.
+  const items = (query.data?.items ?? []).filter((p) => p.status !== "archived");
   const profile = items.find((p) => p.is_primary) ?? items[0];
   return {
     profile,
@@ -39,6 +43,5 @@ export function usePrimaryBusinessProfile(): {
 export function useInvalidateBusinessProfiles() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  return () =>
-    queryClient.invalidateQueries({ queryKey: businessProfilesQueryKey(user?.id) });
+  return () => queryClient.invalidateQueries({ queryKey: businessProfilesQueryKey(user?.id) });
 }
