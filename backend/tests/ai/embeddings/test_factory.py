@@ -26,6 +26,25 @@ def test_get_embedding_provider_returns_openai_provider(monkeypatch: pytest.Monk
     assert isinstance(provider, EmbeddingProvider)
 
 
+def test_get_embedding_provider_returns_gemini_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "EMBEDDING_PROVIDER", "gemini")
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
+
+    provider = get_embedding_provider()
+
+    assert isinstance(provider, EmbeddingProvider)
+
+
+def test_get_embedding_provider_raises_without_gemini_api_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "EMBEDDING_PROVIDER", "gemini")
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", None)
+
+    with pytest.raises(AIProviderConfigError):
+        get_embedding_provider()
+
+
 def test_get_embedding_provider_is_cached(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "EMBEDDING_PROVIDER", "openai")
     monkeypatch.setattr(settings, "OPENAI_API_KEY", "test-key")

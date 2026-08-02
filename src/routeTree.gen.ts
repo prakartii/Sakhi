@@ -26,6 +26,7 @@ import { Route as OpportunitiesRouteImport } from './routes/opportunities'
 import { Route as SchemesRouteImport } from './routes/schemes'
 import { Route as SocialStudioRouteImport } from './routes/social-studio'
 import { Route as WebsiteStudioRouteImport } from './routes/website-studio'
+import { Route as SiteSlugRouteImport } from './routes/site.$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -112,6 +113,11 @@ const WebsiteStudioRoute = WebsiteStudioRouteImport.update({
   path: '/website-studio',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SiteSlugRoute = SiteSlugRouteImport.update({
+  id: '/site/$slug',
+  path: '/site/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/schemes': typeof SchemesRoute
   '/social-studio': typeof SocialStudioRoute
   '/website-studio': typeof WebsiteStudioRoute
+  '/site/$slug': typeof SiteSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/schemes': typeof SchemesRoute
   '/social-studio': typeof SocialStudioRoute
   '/website-studio': typeof WebsiteStudioRoute
+  '/site/$slug': typeof SiteSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/schemes': typeof SchemesRoute
   '/social-studio': typeof SocialStudioRoute
   '/website-studio': typeof WebsiteStudioRoute
+  '/site/$slug': typeof SiteSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/schemes'
     | '/social-studio'
     | '/website-studio'
+    | '/site/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/schemes'
     | '/social-studio'
     | '/website-studio'
+    | '/site/$slug'
   id:
     | '__root__'
     | '/'
@@ -229,6 +240,7 @@ export interface FileRouteTypes {
     | '/schemes'
     | '/social-studio'
     | '/website-studio'
+    | '/site/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -249,6 +261,7 @@ export interface RootRouteChildren {
   SchemesRoute: typeof SchemesRoute
   SocialStudioRoute: typeof SocialStudioRoute
   WebsiteStudioRoute: typeof WebsiteStudioRoute
+  SiteSlugRoute: typeof SiteSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -372,6 +385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WebsiteStudioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/site/$slug': {
+      id: '/site/$slug'
+      path: '/site/$slug'
+      fullPath: '/site/$slug'
+      preLoaderRoute: typeof SiteSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -393,6 +413,7 @@ const rootRouteChildren: RootRouteChildren = {
   SchemesRoute: SchemesRoute,
   SocialStudioRoute: SocialStudioRoute,
   WebsiteStudioRoute: WebsiteStudioRoute,
+  SiteSlugRoute: SiteSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

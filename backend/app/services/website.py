@@ -51,6 +51,8 @@ _SNAPSHOT_FIELDS = (
     "custom_domain",
     "favicon",
     "published",
+    "content",
+    "images",
 )
 
 
@@ -147,6 +149,38 @@ class WebsiteService:
         except IntegrityError as exc:
             await self._session.rollback()
             raise _translate_integrity_error(exc) from exc
+        return website
+
+    async def update_content(
+        self,
+        website_id: uuid.UUID,
+        *,
+        content: dict,
+        images: dict | None = None,
+        seo_title: str | None = None,
+        seo_description: str | None = None,
+        change_notes: str | None = None,
+    ) -> Website:
+        """Persist AI-generated/refined site content (+ optionally synced
+        SEO metadata) as a single version snapshot — the counterpart to
+        update() for writes that come from app.ai.website rather than a
+        user-supplied WebsiteUpdate payload. `images` is only overwritten
+        when explicitly given (a refinement turn that doesn't touch images
+        shouldn't erase the existing ones). seo_title/seo_description are
+        folded in here too — rather than a separate update() call — so one
+        chat turn produces exactly one version, not two.
+        """
+        website = await self.get(website_id)
+        website.content = content
+        if images is not None:
+            website.images = images
+        if seo_title is not None:
+            website.seo_title = seo_title
+        if seo_description is not None:
+            website.seo_description = seo_description
+        await self._session.flush()
+        await self._record_version(website, change_notes=change_notes)
+        await self._session.commit()
         return website
 
     async def delete(self, website_id: uuid.UUID) -> None:

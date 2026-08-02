@@ -14,6 +14,7 @@ Register each feature's router here as it's implemented, e.g.:
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    advisor,
     brand_assets,
     business_memories,
     business_profiles,
@@ -21,13 +22,17 @@ from app.api.v1.endpoints import (
     content_generation,
     inventory,
     marketing_analytics_snapshots,
+    marketing_studio,
+    mentors,
     notifications,
     onboarding,
     scheduled_posts,
+    schemes,
     social_media_connections,
     transactions,
     voice,
     website_generation,
+    website_public,
     websites,
 )
 
@@ -67,6 +72,12 @@ api_router.include_router(
     website_generation.router,
     prefix="/websites",
     tags=["websites", "website-ai"],
+)
+
+api_router.include_router(
+    website_public.router,
+    prefix="/public/websites",
+    tags=["public"],
 )
 
 api_router.include_router(
@@ -115,6 +126,30 @@ api_router.include_router(
     marketing_analytics_snapshots.router,
     prefix="/marketing-analytics",
     tags=["marketing-analytics"],
+)
+
+api_router.include_router(
+    marketing_studio.router,
+    prefix="/marketing-studio",
+    tags=["marketing-studio"],
+)
+
+api_router.include_router(
+    schemes.router,
+    prefix="/schemes",
+    tags=["schemes"],
+)
+
+api_router.include_router(
+    mentors.router,
+    prefix="/mentors",
+    tags=["mentors"],
+)
+
+api_router.include_router(
+    advisor.router,
+    prefix="/advisor",
+    tags=["advisor"],
 )
 
 api_router.include_router(

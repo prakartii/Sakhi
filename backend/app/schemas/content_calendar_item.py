@@ -37,6 +37,8 @@ class ContentCalendarItemBase(BaseModel):
     # so a stray blank in the list doesn't fail the whole request.
     hashtags: list[Annotated[str, Field(max_length=100)]] | None = None
     image_prompt: Annotated[str | None, Field(max_length=2000)] = None
+    generated_image_url: str | None = None
+    generated_video_url: str | None = None
     call_to_action: Annotated[str | None, Field(max_length=200)] = None
     scheduled_datetime: datetime | None = None
     status: ContentStatus = ContentStatus.DRAFT

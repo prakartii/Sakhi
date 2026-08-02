@@ -81,13 +81,24 @@ class Settings(BaseSettings):
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
     AI_TEMPERATURE: float = 0.3
     AI_MAX_TOKENS: int = 1024
+    # Vision-capable Groq model for app.ai.marketing's thumbnail/screenshot
+    # analysis — a separate model from GROQ_MODEL above (text-only) since
+    # not every model on Groq accepts image input.
+    GROQ_VISION_MODEL: str = "meta-llama/llama-4-scout-17b-16e-instruct"
 
     # --- Embedding provider (app.ai.embeddings) ---
     # Groq doesn't serve embedding models, so this is configured separately
     # from AI_PROVIDER above. EMBEDDING_DIM must match the fixed width of
     # memory_embeddings.embedding (see supabase/migrations/19) — changing
-    # it requires a new migration, not just a settings change.
-    EMBEDDING_PROVIDER: Literal["openai"] = "openai"
+    # it requires a new migration, not just a settings change. Gemini is
+    # the default: a genuinely free-tier API (Google AI Studio, no billing
+    # setup) versus OpenAI's paid-only embeddings API — gemini-embedding-001
+    # natively outputs 3072 dims but is truncated to EMBEDDING_DIM=1536 via
+    # output_dimensionality (Matryoshka truncation), so no migration is
+    # needed to match the existing column width.
+    EMBEDDING_PROVIDER: Literal["gemini", "openai"] = "gemini"
+    GEMINI_API_KEY: str | None = None
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
     OPENAI_API_KEY: str | None = None
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     EMBEDDING_DIM: int = 1536
@@ -100,6 +111,22 @@ class Settings(BaseSettings):
     IMAGE_PROVIDER: Literal["together"] = "together"
     TOGETHER_API_KEY: str | None = None
     TOGETHER_IMAGE_MODEL: str = "black-forest-labs/FLUX.1-schnell-Free"
+
+    # "Nano Banana" (Gemini 2.5 Flash Image) — a second, free-tier image
+    # capability used specifically by Content Calendar and Marketing
+    # Studio's reel-visual generation, alongside (not replacing)
+    # IMAGE_PROVIDER above, which stays Together for Website Studio's hero
+    # images. Reuses GEMINI_API_KEY (see the embedding provider settings).
+    NANO_BANANA_MODEL: str = "gemini-2.5-flash-image"
+
+    # --- Video provider (app.ai.video) ---
+    # fal.ai: NOT free on an ongoing basis — a one-time signup credit
+    # (~$10, roughly 50-100 generations on this model), then pay-per-
+    # second. Every call through this provider is a real, billed request;
+    # see app.ai.video's module docstring.
+    VIDEO_PROVIDER: Literal["fal"] = "fal"
+    FAL_API_KEY: str | None = None
+    FAL_VIDEO_MODEL: str = "fal-ai/wan/v2.1/1.3b/text-to-video"
 
     # --- Voice provider (app.ai.voice) ---
     # Sarvam AI handles STT/TTS for Indian languages; Groq (AI_PROVIDER

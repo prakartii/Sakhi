@@ -3,7 +3,7 @@ import { api } from "@/lib/api-client";
 import { usePrimaryBusinessProfile } from "@/hooks/use-business-profile";
 import type { Website, WebsiteGenerateResponse, WebsiteListResponse } from "@/lib/types";
 
-function websitesQueryKey(profileId: string | undefined) {
+export function websitesQueryKey(profileId: string | undefined) {
   return ["websites", profileId];
 }
 

@@ -16,14 +16,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.analytics.models import InventoryUsage, MetricsRows
 from app.ai.analytics.summarizer import summarize
+from app.ai.explanations import ExplanationRequest, explain
+from app.ai.forecasting.run_rate import forecast_run_rate
 from app.ai.forecasting.schemas import RunRatePoint
-from app.ai.providers import AIProviderResponseError
+from app.ai.providers import AIProviderError
 from app.api.deps import get_current_app_user, get_db_session
-from app.models.enums import BusinessStatus, TransactionType
+from app.models.enums import BusinessStatus, MemoryType, TransactionType
 from app.models.user import User
+from app.repositories.business_memory import BusinessMemoryRepository
 from app.repositories.inventory import InventoryRepository
 from app.repositories.transaction import TransactionRepository
-from app.schemas.analytics_summary import AISummaryResponse, TopActionOut
+from app.schemas.analytics_summary import (
+    AISummaryResponse,
+    GrowthForecastResponse,
+    MemorySignalOut,
+    NoticedSummaryResponse,
+    RunRatePointOut,
+    StockSignalOut,
+    TopActionOut,
+)
 from app.schemas.business_profile import (
     BusinessProfileCreate,
     BusinessProfileListResponse,
@@ -39,6 +50,7 @@ from app.services.business_profile import (
     BusinessProfileService,
     InvalidReferenceError,
 )
+from app.services.inventory import InventoryService
 
 router = APIRouter()
 
@@ -200,13 +212,220 @@ async def get_business_profile_ai_summary(
     metrics = MetricsRows(revenue_by_period=revenue_by_period, inventory_usage=inventory_usage)
     try:
         summary = await summarize(to_ai_business_profile(profile), metrics)
-    except AIProviderResponseError as exc:
+    except AIProviderError as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
 
     return AISummaryResponse(
         narrative=summary.narrative,
         highlights=summary.highlights,
         top_actions=[TopActionOut(action=a.action, why=a.why) for a in summary.top_actions],
+    )
+
+
+@router.get(
+    "/{business_profile_id}/growth-forecast",
+    response_model=GrowthForecastResponse,
+    summary="Weekly revenue trend, linear-regression projection, and a narrated read on it",
+    responses={404: {"description": "Business profile not found"}},
+)
+async def get_business_profile_growth_forecast(
+    business_profile_id: uuid.UUID,
+    periods_ahead: int = Query(4, ge=1, le=12, description="How many future weeks to project."),
+    current_user: User = Depends(get_current_app_user),
+    service: BusinessProfileService = Depends(get_service),
+    db: AsyncSession = Depends(get_db_session),
+) -> GrowthForecastResponse:
+    """Projects future weekly revenue via app.ai.forecasting.run_rate's
+    linear regression over logged income — deterministic, no LLM for the
+    numbers. `has_sufficient_data=False` (with empty `projected`) means
+    fewer than 2 distinct weeks of income are logged yet, too little to
+    fit a trend. why/basis (best-effort; omitted, not failed, if the AI
+    provider errors) narrate the already-computed trend and confidence,
+    never invent a number."""
+    try:
+        profile = await service.get(business_profile_id)
+    except BusinessProfileNotFoundError as exc:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "Business profile not found."
+        ) from exc
+    if profile.user_id != current_user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Business profile not found.")
+
+    transactions_repo = TransactionRepository(db)
+    income, _ = await transactions_repo.list_by_business_profile(
+        business_profile_id, transaction_type=TransactionType.INCOME, limit=200
+    )
+    weekly_totals: dict[date, float] = defaultdict(float)
+    for txn in income:
+        week_start = txn.transaction_date - timedelta(days=txn.transaction_date.weekday())
+        weekly_totals[week_start] += float(txn.amount)
+    historical = [
+        RunRatePoint(period_start=week, value=total)
+        for week, total in sorted(weekly_totals.items())
+    ]
+    historical_out = [RunRatePointOut(period_start=p.period_start, value=p.value) for p in historical]
+
+    if len(historical) < 2:
+        return GrowthForecastResponse(has_sufficient_data=False, historical=historical_out, projected=[])
+
+    forecast = forecast_run_rate(historical, periods_ahead=periods_ahead)
+    projected_out = [
+        RunRatePointOut(period_start=p.period_start, value=p.value) for p in forecast.projected_periods
+    ]
+
+    direction = "growing" if forecast.trend_per_period > 0 else "shrinking" if forecast.trend_per_period < 0 else "flat"
+    facts = [
+        f"Weekly revenue trend is {direction}, changing by roughly Rs {abs(forecast.trend_per_period):,.0f} per week.",
+        f"Recent {min(len(historical), 3)}-week moving average revenue: Rs {forecast.moving_average:,.0f}.",
+        f"Projected revenue {periods_ahead} week(s) from now: Rs {forecast.projected_next_value:,.0f}.",
+        f"Trend confidence (fit quality): {forecast.confidence_score:.0f} out of 100.",
+    ]
+    why, basis = None, None
+    try:
+        explanation = await explain(
+            ExplanationRequest(subject="Your revenue trend and growth projection", facts=facts)
+        )
+        why, basis = explanation.why, explanation.basis
+    except AIProviderError:
+        pass
+
+    return GrowthForecastResponse(
+        has_sufficient_data=True,
+        historical=historical_out,
+        projected=projected_out,
+        moving_average=forecast.moving_average,
+        trend_per_period=forecast.trend_per_period,
+        confidence_score=forecast.confidence_score,
+        why=why,
+        basis=basis,
+    )
+
+
+_STOCKOUT_ALERT_WINDOW_DAYS = 14
+_NOTICED_MEMORY_LIMIT = 2
+
+
+@router.get(
+    "/{business_profile_id}/noticed-summary",
+    response_model=NoticedSummaryResponse,
+    summary="Proactive cross-module signals: stock, revenue trend, and memory, connected in one narrative",
+    responses={404: {"description": "Business profile not found"}},
+)
+async def get_business_profile_noticed_summary(
+    business_profile_id: uuid.UUID,
+    current_user: User = Depends(get_current_app_user),
+    service: BusinessProfileService = Depends(get_service),
+    db: AsyncSession = Depends(get_db_session),
+) -> NoticedSummaryResponse:
+    """Deliberately does not repeat GET /schemes/matches — this is the one
+    place in the app that looks *across* inventory, revenue and memory at
+    once. Each signal is computed the same deterministic way its own page
+    computes it (app.ai.forecasting.stockout / run_rate, real memory rows);
+    connected_why/connected_basis only fire when at least two different
+    modules actually have something to say this week, and narrate how they
+    relate — the synthesis, not a re-listing of each page's own top item."""
+    try:
+        profile = await service.get(business_profile_id)
+    except BusinessProfileNotFoundError as exc:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "Business profile not found."
+        ) from exc
+    if profile.user_id != current_user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Business profile not found.")
+
+    facts: list[str] = []
+
+    # -- stock: only items genuinely close to running out -----------------
+    inventory_repo = InventoryRepository(db)
+    inventory_service = InventoryService(db, inventory_repo)
+    low_stock, _ = await inventory_repo.list_low_stock(business_profile_id, limit=5)
+    stock_signals: list[StockSignalOut] = []
+    for item in low_stock:
+        item_forecast = await inventory_service.get_forecast(item.id)
+        if (
+            item_forecast.has_sufficient_data
+            and item_forecast.days_of_stock_remaining is not None
+            and item_forecast.days_of_stock_remaining <= _STOCKOUT_ALERT_WINDOW_DAYS
+        ):
+            days = round(item_forecast.days_of_stock_remaining)
+            stock_signals.append(
+                StockSignalOut(
+                    inventory_id=item.id,
+                    item_name=item.item_name,
+                    days_remaining=days,
+                    current_quantity=float(item.current_quantity),
+                    unit=item.unit,
+                )
+            )
+            facts.append(f"{item.item_name} will run out in about {days} days.")
+
+    # -- revenue: only a decline counts as a signal worth surfacing here ---
+    transactions_repo = TransactionRepository(db)
+    income, _ = await transactions_repo.list_by_business_profile(
+        business_profile_id, transaction_type=TransactionType.INCOME, limit=200
+    )
+    weekly_totals: dict[date, float] = defaultdict(float)
+    for txn in income:
+        week_start = txn.transaction_date - timedelta(days=txn.transaction_date.weekday())
+        weekly_totals[week_start] += float(txn.amount)
+    historical = [
+        RunRatePoint(period_start=week, value=total)
+        for week, total in sorted(weekly_totals.items())
+    ]
+    revenue_trend: float | None = None
+    revenue_declining = False
+    if len(historical) >= 2:
+        run_rate = forecast_run_rate(historical, periods_ahead=1)
+        revenue_trend = run_rate.trend_per_period
+        revenue_declining = run_rate.trend_per_period < 0
+        if revenue_declining:
+            facts.append(
+                f"Weekly revenue is declining by roughly Rs {abs(run_rate.trend_per_period):,.0f} per week."
+            )
+
+    # -- memory: only unresolved challenges, not goals (those belong on
+    # the Memory page, not an urgency feed) --------------------------------
+    memory_repo = BusinessMemoryRepository(db)
+    memories, _ = await memory_repo.list_by_business_profile(
+        business_profile_id, is_archived=False, limit=50
+    )
+    challenges = sorted(
+        (m for m in memories if m.memory_type == MemoryType.CHALLENGE),
+        key=lambda m: m.importance_score,
+        reverse=True,
+    )[:_NOTICED_MEMORY_LIMIT]
+    memory_signals = [
+        MemorySignalOut(business_memory_id=m.id, title=m.title, content=m.content)
+        for m in challenges
+    ]
+    for m in challenges:
+        facts.append(f"Logged challenge: {m.title or m.content[:120]}.")
+
+    # -- the actual USP: only narrate a connection when >=2 modules have
+    # something to say — a single-domain signal is just that page's job ---
+    connected_why, connected_basis = None, None
+    domains_with_signals = sum(
+        [bool(stock_signals), revenue_declining, bool(memory_signals)]
+    )
+    if domains_with_signals >= 2:
+        try:
+            explanation = await explain(
+                ExplanationRequest(
+                    subject="What's compounding across your business this week",
+                    facts=facts,
+                )
+            )
+            connected_why, connected_basis = explanation.why, explanation.basis
+        except AIProviderError:
+            pass
+
+    return NoticedSummaryResponse(
+        stock_signals=stock_signals,
+        revenue_trend_per_week=revenue_trend,
+        revenue_declining=revenue_declining,
+        memory_signals=memory_signals,
+        connected_why=connected_why,
+        connected_basis=connected_basis,
     )
 
 

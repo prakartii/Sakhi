@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.brand.generator import generate_brand
 from app.ai.business.onboarding import parse_onboarding
-from app.ai.providers import AIProviderResponseError
+from app.ai.providers import AIProviderError
 from app.api.deps import get_current_app_user, get_db_session
 from app.models.user import User
 from app.schemas.brand_asset import BrandAssetCreate
@@ -56,7 +56,7 @@ async def create_from_story(
     try:
         ai_profile = await parse_onboarding(payload.text)
         brand_kit = await generate_brand(ai_profile)
-    except AIProviderResponseError as exc:
+    except AIProviderError as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc

@@ -37,6 +37,35 @@ FIXED_DATE_FESTIVALS: dict[tuple[int, int], str] = {
     (12, 25): "Christmas",
 }
 
+# Lunar/lunisolar festivals shift every year, so — unlike the fixed-date
+# table above — these are looked up per calendar year rather than by a
+# fixed (month, day). Dates are the commonly-published civil dates for
+# each year; Eid al-Fitr/al-Adha remain approximate pending local moon
+# sighting, noted in the name itself rather than presented as exact.
+LUNAR_FESTIVALS_BY_YEAR: dict[int, dict[tuple[int, int], str]] = {
+    2026: {
+        (3, 4): "Holi",
+        (3, 20): "Eid al-Fitr (approx.)",
+        (5, 27): "Eid al-Adha (approx.)",
+        (8, 28): "Raksha Bandhan",
+        (9, 14): "Ganesh Chaturthi",
+        (10, 11): "Navratri begins",
+        (10, 20): "Dussehra",
+        (11, 8): "Diwali",
+    },
+}
+
+
+def festival_for_date(d: date) -> str | None:
+    """A festival name for `d`, if any — fixed-date first, then this
+    year's lunar table (empty for years not in LUNAR_FESTIVALS_BY_YEAR
+    rather than guessing). Shared by schedule_month() and by single-post
+    regeneration, which has no ScheduledSlot of its own to carry the
+    festival forward."""
+    return FIXED_DATE_FESTIVALS.get((d.month, d.day)) or LUNAR_FESTIVALS_BY_YEAR.get(
+        d.year, {}
+    ).get((d.month, d.day))
+
 
 def schedule_month(
     month: date,
@@ -67,7 +96,7 @@ def schedule_month(
         platform = platforms[i % len(platforms)]
         post_type = _POST_TYPE_CYCLE[i % len(_POST_TYPE_CYCLE)]
         post_time = _PLATFORM_BEST_TIMES.get(platform.lower(), _DEFAULT_POST_TIME)
-        festival = FIXED_DATE_FESTIVALS.get((d.month, d.day))
+        festival = festival_for_date(d)
         slots.append(
             ScheduledSlot(date=d, platform=platform, type=post_type, post_time=post_time, festival=festival)
         )

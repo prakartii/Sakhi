@@ -1,3 +1,4 @@
+from app.ai.website.chat import WebsiteChatTurn, converse
 from app.ai.website.generator import generate_site
 from app.ai.website.models import (
     About,
@@ -22,6 +23,8 @@ __all__ = [
     "Pages",
     "Section",
     "SiteProduct",
+    "WebsiteChatTurn",
     "WebsiteSpec",
+    "converse",
     "generate_site",
 ]

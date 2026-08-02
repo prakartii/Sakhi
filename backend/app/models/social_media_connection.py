@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from app.models.business_profile import BusinessProfile
     from app.models.content_calendar_item import ContentCalendarItem
     from app.models.marketing_analytics_snapshot import MarketingAnalyticsSnapshot
+    from app.models.marketing_content_analysis import MarketingContentAnalysis
     from app.models.scheduled_post import ScheduledPost
 
 
@@ -77,6 +78,9 @@ class SocialMediaConnection(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     marketing_analytics_snapshots: Mapped[list["MarketingAnalyticsSnapshot"]] = (
         relationship(back_populates="social_connection")
+    )
+    marketing_content_analyses: Mapped[list["MarketingContentAnalysis"]] = relationship(
+        back_populates="social_connection"
     )
 
 

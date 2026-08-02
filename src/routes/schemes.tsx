@@ -1,5 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Coins, FileText, Hammer, ShieldCheck, Users } from "lucide-react";
+import {
+  Check,
+  Coins,
+  FileText,
+  Hammer,
+  Landmark,
+  Loader2,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import { Page } from "@/components/sakhi/Layout";
 import { MicPanel } from "@/components/sakhi/MicPanel";
 import { Reveal } from "@/components/sakhi/Reveal";
@@ -11,9 +20,12 @@ import {
   HandNote,
   Meter,
   Pill,
+  type Tone,
   Why,
 } from "@/components/sakhi/Cards";
 import { IconBadge, PostageStamp } from "@/components/sakhi/CompanionAssets";
+import { useSchemeMatches } from "@/hooks/use-schemes";
+import type { SchemeMatch } from "@/lib/types";
 
 export const Route = createFileRoute("/schemes")({
   head: () => ({
@@ -34,63 +46,95 @@ export const Route = createFileRoute("/schemes")({
   component: Schemes,
 });
 
-const SCHEMES = [
-  {
-    name: "PM Vishwakarma",
-    sub: "For traditional craft workers — block printing is a listed trade.",
-    match: 92,
-    pill: "₹15,000 toolkit + ₹3,00,000 credit at 5%",
-    tone: "leaf" as const,
-    icon: Hammer,
-    why: "Your trade is on the 18-craft list, you have Aadhaar-linked Udyam registration, and six months of logged sales cover the income-proof requirement.",
-  },
-  {
-    name: "Mudra — Kishore",
-    sub: "Working-capital loan for micro-enterprises.",
-    match: 88,
-    pill: "Up to ₹1,50,000 collateral-free",
-    tone: "rose" as const,
-    icon: Coins,
-    why: "Average monthly net of ₹19,800 over six months and no missed supplier payments put you inside the Kishore band; you'd have failed this in March.",
-  },
-  {
-    name: "MSME Udyam benefits",
-    sub: "Registration-linked benefits for micro units.",
-    match: 84,
-    pill: "Subsidised credit, ₹1,00,000 tender access",
-    tone: "marigold" as const,
-    icon: FileText,
-    why: "You are already Udyam-registered — the unclaimed part is the interest subvention on your existing fabric credit line.",
-  },
-  {
-    name: "Stand-Up India",
-    sub: "Bank loans for women and SC/ST entrepreneurs.",
-    match: 61,
-    pill: "₹10,00,000 — ₹1,00,00,000",
-    tone: "indigo" as const,
-    icon: Users,
-    why: "You qualify as a woman-led unit, but the minimum ticket size assumes a project around ₹10,00,000 — your current scale is a tenth of that.",
-  },
-  {
-    name: "CGTMSE guarantee",
-    sub: "Credit guarantee so banks don't ask for collateral.",
-    match: 57,
-    pill: "Guarantee covers up to ₹1,50,00,000",
-    tone: "sand" as const,
-    icon: ShieldCheck,
-    why: "Applies once you take a loan above ₹1,50,000 — useful after Mudra, not instead of it.",
-  },
-];
+const CARD_TONES: Tone[] = ["leaf", "rose", "marigold", "indigo", "sand"];
+const PILL_TONES = ["leaf", "rose", "marigold", "indigo"] as const;
+
+const SCHEME_ICONS: Record<string, typeof Hammer> = {
+  "PM-VISHWAKARMA": Hammer,
+  "MUDRA-KISHORE": Coins,
+  "UDYAM-BENEFITS": FileText,
+  "STANDUP-INDIA": Users,
+  CGTMSE: ShieldCheck,
+};
+
+function iconFor(schemeCode: string | null) {
+  return (schemeCode && SCHEME_ICONS[schemeCode]) || Landmark;
+}
 
 const READINESS = [
-  { done: true, title: "Udyam registration", sub: "UDYAM-RJ-17-004339" },
-  { done: true, title: "6 months of records", sub: "47 logged entries" },
-  { done: true, title: "Bank account linked to business", sub: "Jaipur co-op, since 2024" },
+  {
+    done: true,
+    title: "Udyam registration",
+    sub: "Add yours in Business Setup to unlock more matches",
+  },
+  {
+    done: true,
+    title: "Business profile complete",
+    sub: "Registration type and business age drive your matches",
+  },
   { done: false, title: "GST registration", sub: "Not needed under ₹40L, but unlocks tenders" },
-  { done: false, title: "Digital payment history", sub: "Only 34% of sales via UPI — aim for 70%" },
+  {
+    done: false,
+    title: "Digital payment history",
+    sub: "More logged UPI sales strengthen your loan applications",
+  },
 ];
 
+function SchemeCard({ scheme, index }: { scheme: SchemeMatch; index: number }) {
+  const tone = CARD_TONES[index % CARD_TONES.length]!;
+  const Icon = iconFor(scheme.scheme_code);
+  const roundedMatch = Math.round(scheme.match_score);
+
+  return (
+    <Craft tone={tone} texture={index % 2 === 0 ? "blockprint" : "weave"} className="h-full">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <IconBadge icon={Icon} tone={tone === "cream" ? "rose" : tone} />
+          <div className="min-w-0">
+            <h3 className="font-display text-xl font-semibold">{scheme.scheme_name}</h3>
+            <p className="mt-1 text-[12.5px] text-foreground/70">
+              {scheme.issuing_authority ?? scheme.category ?? "Government scheme"}
+            </p>
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="font-display text-lg font-semibold text-wine">{roundedMatch}%</p>
+          <Eyebrow>match</Eyebrow>
+        </div>
+      </div>
+      {scheme.benefits ? (
+        <div className="mt-3">
+          <Pill tone={PILL_TONES[index % PILL_TONES.length]!}>{scheme.benefits}</Pill>
+        </div>
+      ) : null}
+      {!scheme.is_eligible && (
+        <div className="mt-2">
+          <Pill tone="marigold">Not eligible yet</Pill>
+        </div>
+      )}
+      <Meter value={roundedMatch} />
+      <Why>{scheme.why}</Why>
+      <Basis>{scheme.basis}</Basis>
+      {scheme.application_url ? (
+        <a
+          href={scheme.application_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-transform hover:translate-x-0.5"
+        >
+          Start application <span aria-hidden>→</span>
+        </a>
+      ) : (
+        <Action>Start application</Action>
+      )}
+    </Craft>
+  );
+}
+
 function Schemes() {
+  const { data, isLoading, isError } = useSchemeMatches();
+  const items = data?.items ?? [];
+
   return (
     <Page>
       <section className="grid items-center gap-10 py-14 lg:grid-cols-[1.1fr_0.9fr]">
@@ -128,50 +172,36 @@ function Schemes() {
       <div className="thread opacity-50" />
 
       <section className="grid gap-5 py-10 lg:grid-cols-2">
-        {SCHEMES.map((s, i) => (
-          <Reveal key={s.name} delay={i * 70} className={i === 0 ? "lg:row-span-1" : ""}>
-            <Craft tone={s.tone} texture={i % 2 === 0 ? "blockprint" : "weave"} className="h-full">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex min-w-0 items-start gap-3">
-                  <IconBadge icon={s.icon} tone={s.tone} />
-                  <div className="min-w-0">
-                    <h3 className="font-display text-xl font-semibold">{s.name}</h3>
-                    <p className="mt-1 text-[12.5px] text-foreground/70">{s.sub}</p>
-                  </div>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="font-display text-lg font-semibold text-wine">{s.match}%</p>
-                  <Eyebrow>match</Eyebrow>
-                </div>
-              </div>
-              <div className="mt-3">
-                <Pill
-                  tone={
-                    s.tone === "leaf"
-                      ? "leaf"
-                      : s.tone === "indigo"
-                        ? "indigo"
-                        : s.tone === "marigold"
-                          ? "marigold"
-                          : "rose"
-                  }
-                >
-                  {s.pill}
-                </Pill>
-              </div>
-              <Meter value={s.match} />
-              <Why>{s.why}</Why>
-              <Basis />
-              <Action>Start application</Action>
-            </Craft>
-          </Reveal>
-        ))}
+        {isLoading ? (
+          <div className="col-span-full flex justify-center py-14">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : isError ? (
+          <div className="card-soft col-span-full rounded-2xl px-6 py-10 text-center text-sm text-muted-foreground">
+            Couldn't load your scheme matches right now — try again shortly.
+          </div>
+        ) : items.length === 0 ? (
+          <div className="card-soft col-span-full rounded-2xl px-6 py-10 text-center text-sm text-muted-foreground">
+            No schemes matched yet — complete your business profile in Business Setup for a better
+            match.
+          </div>
+        ) : (
+          items.map((scheme, i) => (
+            <Reveal
+              key={scheme.scheme_id}
+              delay={i * 70}
+              className={i === 0 ? "lg:row-span-1" : ""}
+            >
+              <SchemeCard scheme={scheme} index={i} />
+            </Reveal>
+          ))
+        )}
 
         <Reveal delay={120}>
           <Craft tone="leaf" texture="weave" className="h-full">
             <Eyebrow>Financial readiness</Eyebrow>
             <h3 className="mt-2 font-display text-xl font-semibold">
-              3 of 5 done — 2 unlock bigger money
+              {READINESS.filter((r) => r.done).length} of {READINESS.length} done
             </h3>
             <ul className="mt-4 space-y-3">
               {READINESS.map((r) => (
@@ -191,11 +221,11 @@ function Schemes() {
               ))}
             </ul>
             <Why>
-              Moving UPI collections from 34% to 70% is the single fastest lift — lenders read
-              digital receipts as verified income, and it raises your Mudra band by roughly ₹40,000.
+              A complete, Udyam-registered business profile is the single fastest lift — it raises
+              your eligibility across every scheme on this page.
             </Why>
             <Basis />
-            <HandNote>Two boxes stand between you and ₹40,000 more.</HandNote>
+            <HandNote>Two boxes stand between you and better matches.</HandNote>
           </Craft>
         </Reveal>
       </section>

@@ -1,37 +1,88 @@
-"""POST /websites/generate — Website Studio's "Generate" / "Regenerate"
-action. Thin wrapper: calls app.ai.website.generator.generate_site() and
-persists the result's metadata through the existing WebsiteService
+"""POST /websites/generate — Website Studio's one-shot "Generate" /
+"Regenerate" action. Thin wrapper: calls app.ai.website.generator.generate_site()
+and persists the result's metadata through the existing WebsiteService
 (create on first generation, update — which auto-records a new version —
-on regeneration). No new storage logic; the full generated page copy is
-returned in the response since websites/website_versions has no column for
-it (see the integration plan's schema notes) — the frontend re-fetches it
-on each Website Studio visit rather than reading it back from storage.
+on regeneration).
+
+POST /websites/chat, GET /websites/{business_profile_id}/chat — Website
+Studio's interactive curation flow: each chat message advances the site by
+one turn via app.ai.website.chat.converse() (first message creates,
+follow-ups edit the existing site), persists the full result (not just
+metadata — see migration 26) plus both chat turns, and best-effort
+generates a hero preview image via app.ai.image. Chat history is stored in
+the existing conversation_history table, keyed by session_id = website.id.
 """
+
+from __future__ import annotations
+
+import re
+import secrets
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.providers import AIProviderResponseError
+from app.ai.image.generator import generate_image
+from app.ai.providers.base import AIProviderError
+from app.ai.website.chat import converse as ai_converse
 from app.ai.website.generator import generate_site
+from app.ai.website.models import WebsiteSpec
 from app.api.deps import get_current_app_user, get_db_session
-from app.models.enums import BrandAssetStatus
+from app.models.conversation_history import ConversationHistory
+from app.models.enums import BrandAssetStatus, ConversationMessageType, ConversationRole
 from app.models.user import User
 from app.repositories.brand_asset import BrandAssetRepository
 from app.repositories.business_profile import BusinessProfileRepository
+from app.repositories.conversation_history import ConversationHistoryRepository
 from app.repositories.website import WebsiteRepository
 from app.schemas.website import WebsiteCreate, WebsiteUpdate
 from app.schemas.website_generation import (
+    ChatMessageOut,
     FAQItemOut,
     HeroOut,
     SectionOut,
     SiteProductOut,
+    WebsiteChatHistoryResponse,
+    WebsiteChatRequest,
+    WebsiteChatResponse,
     WebsiteGenerateRequest,
     WebsiteGenerateResponse,
+    WebsiteImagesOut,
 )
 from app.services.ai_mapping import to_ai_brand_kit, to_ai_business_profile
 from app.services.website import WebsiteService
 
 router = APIRouter()
+
+_SLUG_SANITIZE_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _make_preview_slug(business_name: str) -> str:
+    base = _SLUG_SANITIZE_RE.sub("-", business_name.lower()).strip("-") or "site"
+    suffix = secrets.token_hex(3)  # 6 hex chars — collision-proof enough at this scale
+    return f"{base}-{suffix}"[:80]
+
+
+async def _get_owned_profile_and_brand(
+    db: AsyncSession, business_profile_id: uuid.UUID, current_user: User
+):
+    profiles = BusinessProfileRepository(db)
+    profile = await profiles.get_by_id(business_profile_id)
+    if profile is None or profile.user_id != current_user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Business profile not found.")
+
+    brand_assets = BrandAssetRepository(db)
+    brands, _ = await brand_assets.list_by_business_profile(
+        profile.id, status=BrandAssetStatus.DRAFT, limit=1
+    )
+    if not brands:
+        brands, _ = await brand_assets.list_by_business_profile(profile.id, limit=1)
+    if not brands:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "No brand kit exists for this business yet — complete onboarding first.",
+        )
+    return profile, brands[0]
 
 
 @router.post(
@@ -50,27 +101,11 @@ async def generate_website(
     current_user: User = Depends(get_current_app_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> WebsiteGenerateResponse:
-    profiles = BusinessProfileRepository(db)
-    profile = await profiles.get_by_id(payload.business_profile_id)
-    if profile is None or profile.user_id != current_user.id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Business profile not found.")
-
-    brand_assets = BrandAssetRepository(db)
-    brands, _ = await brand_assets.list_by_business_profile(
-        profile.id, status=BrandAssetStatus.DRAFT, limit=1
-    )
-    if not brands:
-        brands, _ = await brand_assets.list_by_business_profile(profile.id, limit=1)
-    if not brands:
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
-            "No brand kit exists for this business yet — complete onboarding first.",
-        )
-    brand = brands[0]
+    profile, brand = await _get_owned_profile_and_brand(db, payload.business_profile_id, current_user)
 
     try:
         spec = await generate_site(to_ai_business_profile(profile), to_ai_brand_kit(brand))
-    except AIProviderResponseError as exc:
+    except AIProviderError as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
 
     website_service = WebsiteService(db)
@@ -95,8 +130,12 @@ async def generate_website(
                 template="ai-generated",
                 seo_title=spec.seo.title[:200],
                 seo_description=spec.seo.description[:300],
+                preview_slug=_make_preview_slug(profile.business_name),
             )
         )
+    website = await website_service.update_content(
+        website.id, content=spec.model_dump(mode="json"), change_notes="Full copy generated"
+    )
 
     return WebsiteGenerateResponse(
         website=website,
@@ -117,4 +156,155 @@ async def generate_website(
         contact=spec.pages.contact.body,
         faq=[FAQItemOut(q=f.q, a=f.a) for f in spec.pages.faq],
         seo_keywords=spec.seo.keywords,
+    )
+
+
+@router.post(
+    "/chat",
+    response_model=WebsiteChatResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Send one Website Studio chat message; get back a reply and the (created or refined) site",
+    responses={
+        404: {"description": "Business profile not found or not owned by the caller"},
+        422: {"description": "No brand kit exists yet, or the message is empty"},
+        503: {"description": "AI provider unavailable"},
+    },
+)
+async def website_chat(
+    payload: WebsiteChatRequest,
+    current_user: User = Depends(get_current_app_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> WebsiteChatResponse:
+    profile, brand = await _get_owned_profile_and_brand(db, payload.business_profile_id, current_user)
+
+    websites = WebsiteRepository(db)
+    existing, _ = await websites.list_by_business_profile(profile.id, limit=1)
+    website = existing[0] if existing else None
+    current_site = (
+        WebsiteSpec.model_validate(website.content)
+        if website is not None and website.content is not None
+        else None
+    )
+
+    try:
+        turn = await ai_converse(
+            to_ai_business_profile(profile),
+            to_ai_brand_kit(brand),
+            payload.message,
+            current_site=current_site,
+        )
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    except AIProviderError as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+
+    images = website.images if website is not None else None
+    if images is None:
+        # Best-effort: a hero image is nice-to-have, never worth failing
+        # the whole chat turn over if the image provider is down/misconfigured.
+        try:
+            hero_image = await generate_image(
+                f"{turn.site.pages.landing.hero.headline}. {turn.site.seo.description}",
+                "brand",
+                "landscape",
+            )
+            images = {"hero_url": hero_image.url}
+        except AIProviderError:
+            images = None
+
+    website_service = WebsiteService(db)
+    if website is None:
+        website = await website_service.create(
+            WebsiteCreate(
+                business_profile_id=profile.id,
+                website_name=profile.business_name,
+                template="ai-generated",
+                preview_slug=_make_preview_slug(profile.business_name),
+            )
+        )
+    website = await website_service.update_content(
+        website.id,
+        content=turn.site.model_dump(mode="json"),
+        images=images,
+        seo_title=turn.site.seo.title[:200],
+        seo_description=turn.site.seo.description[:300],
+        change_notes="Website Studio chat turn",
+    )
+
+    conversation = ConversationHistoryRepository(db)
+    await conversation.create(
+        ConversationHistory(
+            business_profile_id=profile.id,
+            user_id=current_user.id,
+            session_id=website.id,
+            role=ConversationRole.USER,
+            message_type=ConversationMessageType.TEXT,
+            content=payload.message,
+        )
+    )
+    await conversation.create(
+        ConversationHistory(
+            business_profile_id=profile.id,
+            user_id=current_user.id,
+            session_id=website.id,
+            role=ConversationRole.ASSISTANT,
+            message_type=ConversationMessageType.TEXT,
+            content=turn.reply,
+        )
+    )
+    await db.commit()
+
+    return WebsiteChatResponse(
+        website=website,
+        reply=turn.reply,
+        hero=HeroOut(
+            headline=turn.site.pages.landing.hero.headline,
+            subhead=turn.site.pages.landing.hero.subhead,
+            cta=turn.site.pages.landing.hero.cta,
+        ),
+        sections=[
+            SectionOut(type=s.type, heading=s.heading, body=s.body)
+            for s in turn.site.pages.landing.sections
+        ],
+        about=turn.site.pages.about.body,
+        products=[
+            SiteProductOut(name=p.name, description=p.description, price=p.price)
+            for p in turn.site.pages.products
+        ],
+        contact=turn.site.pages.contact.body,
+        faq=[FAQItemOut(q=f.q, a=f.a) for f in turn.site.pages.faq],
+        seo_keywords=turn.site.seo.keywords,
+        images=WebsiteImagesOut(**(images or {})),
+        preview_path=f"/site/{website.preview_slug}" if website.published and website.preview_slug else None,
+    )
+
+
+@router.get(
+    "/{business_profile_id}/chat",
+    response_model=WebsiteChatHistoryResponse,
+    summary="Website Studio chat history for a business",
+    responses={404: {"description": "Business profile not found or not owned by the caller"}},
+)
+async def website_chat_history(
+    business_profile_id: uuid.UUID,
+    current_user: User = Depends(get_current_app_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> WebsiteChatHistoryResponse:
+    profiles = BusinessProfileRepository(db)
+    profile = await profiles.get_by_id(business_profile_id)
+    if profile is None or profile.user_id != current_user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Business profile not found.")
+
+    websites = WebsiteRepository(db)
+    existing, _ = await websites.list_by_business_profile(profile.id, limit=1)
+    if not existing:
+        return WebsiteChatHistoryResponse(messages=[])
+
+    conversation = ConversationHistoryRepository(db)
+    turns, _ = await conversation.list_by_session(existing[0].id, limit=200)
+    return WebsiteChatHistoryResponse(
+        messages=[
+            ChatMessageOut(role=turn.role.value, content=turn.content, created_at=turn.created_at)
+            for turn in turns
+        ]
     )

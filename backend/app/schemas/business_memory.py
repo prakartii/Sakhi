@@ -36,3 +36,26 @@ class BusinessMemoryListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class MemorySearchResultOut(BaseModel):
+    business_memory_id: uuid.UUID
+    title: str | None
+    content: str
+    similarity: float
+
+
+class MemorySearchResponse(BaseModel):
+    query: str
+    results: list[MemorySearchResultOut]
+
+
+class MemoryInsightsResponse(BaseModel):
+    """A narrated 'Why' over a business's memory stats (app.ai.explanations),
+    grounded in facts computed from the business's own memory rows."""
+
+    why: str
+    basis: str
+    total: int
+    top_type: str | None
+    avg_importance: float | None

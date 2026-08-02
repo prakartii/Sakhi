@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Page } from "@/components/sakhi/Layout";
 import { RequireAuth, RequireBusinessProfile } from "@/components/sakhi/RouteGuards";
-import { usePrimaryBrandAsset, useUpdateBrandAsset } from "@/hooks/use-brand-assets";
+import {
+  useGenerateLogo,
+  usePrimaryBrandAsset,
+  useUpdateBrandAsset,
+} from "@/hooks/use-brand-assets";
 import { Reveal } from "@/components/sakhi/Reveal";
 import { Action, Basis, Craft, Eyebrow, Hero, HandNote, Pill, Why } from "@/components/sakhi/Cards";
 import { BotanicalMark, DeckleCard, StitchDivider } from "@/components/sakhi/CompanionAssets";
@@ -58,6 +62,7 @@ function HexSwatch({ hex, label }: { hex: string; label: string }) {
 function BrandStudio() {
   const { brandAsset, isLoading } = usePrimaryBrandAsset();
   const updateBrandAsset = useUpdateBrandAsset(brandAsset?.id);
+  const generateLogo = useGenerateLogo(brandAsset?.id);
 
   const [tagline, setTagline] = useState("");
   const [story, setStory] = useState("");
@@ -102,6 +107,13 @@ function BrandStudio() {
     .filter(Boolean);
   const [headingFont, bodyFont] = (brandAsset.typography ?? "").split("/").map((f) => f.trim());
 
+  function handleGenerateLogo() {
+    generateLogo.mutate(undefined, {
+      onSuccess: () => toast.success("New logo recommendation ready"),
+      onError: () => toast.error("Couldn't generate a logo — try again"),
+    });
+  }
+
   function handleSaveIdentity() {
     updateBrandAsset.mutate(
       { tagline: tagline || null, brand_story: story || null },
@@ -123,6 +135,62 @@ function BrandStudio() {
             accent="looks like you."
             copy="Everything Sakhi built for your identity during setup — colour, voice, typography and guidelines — kept in one workspace."
           />
+        </Reveal>
+      </section>
+
+      <div className="thread opacity-50" />
+
+      <section className="py-10">
+        <Reveal>
+          <Craft tone="lilac" texture="weave">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-wine" />
+              <Eyebrow>Recommended logo</Eyebrow>
+            </div>
+            <div className="mt-5 flex flex-col items-center gap-5 sm:flex-row sm:items-start">
+              <div className="grid h-32 w-32 shrink-0 place-items-center overflow-hidden rounded-2xl bg-card ring-1 ring-clay/20">
+                {generateLogo.isPending ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                ) : brandAsset.logo_url ? (
+                  <img
+                    src={brandAsset.logo_url}
+                    alt={`${brandAsset.brand_name} logo`}
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <span className="px-3 text-center text-[11px] text-muted-foreground">
+                    No logo generated yet
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] text-foreground/75">
+                  Sakhi can recommend a logo mark from your business name, tagline, brand voice and
+                  colour palette — a starting concept, not a final trademark-ready file.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleGenerateLogo}
+                  disabled={generateLogo.isPending}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-70"
+                >
+                  {generateLogo.isPending ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating…
+                    </>
+                  ) : brandAsset.logo_url ? (
+                    "Regenerate logo"
+                  ) : (
+                    "Generate a logo"
+                  )}
+                </button>
+                <Basis>
+                  Built from your brand name, tagline, voice and primary colour — regenerate for a
+                  different concept.
+                </Basis>
+              </div>
+            </div>
+          </Craft>
         </Reveal>
       </section>
 

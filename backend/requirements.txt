@@ -20,6 +20,8 @@ groq>=1.6.0,<2.0.0
 openai>=2.52.0,<3.0.0
 together>=2.28.0,<3.0.0
 sarvamai>=0.1.28,<0.2.0
+google-genai>=2.16.0,<3.0.0
+fal-client>=1.0.0,<2.0.0
 
 # --- Auth (verifies Supabase session tokens against Supabase's own
 # /auth/v1/user endpoint — no JWT signing scheme to keep in sync) ---

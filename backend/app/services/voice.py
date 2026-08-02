@@ -112,18 +112,27 @@ class VoiceConversationService:
                 pass
 
         ai_profile = to_ai_business_profile(profile)
+        # Reply in whatever Sarvam actually detected (falling back to the
+        # requested `language`) so the text handed to synthesize() below
+        # matches the voice/language it's spoken in — see prompts.py's
+        # LANGUAGE_NAMES for why this matters (a mismatch makes TTS read
+        # English text with the wrong language's pronunciation rules).
+        reply_language = transcription.detected_language or language
         try:
             orchestrator_response = await orchestrate(
                 transcription.text,
                 ai_profile,
                 session=self._session,
+                language=reply_language,
             )
         except AIProviderError:
             # Same embeddings-provider failure can surface here too, via
             # the orchestrator's own retrieval step — retry once without a
             # session so reasoning still happens, just ungrounded in past
             # memory for this turn.
-            orchestrator_response = await orchestrate(transcription.text, ai_profile)
+            orchestrator_response = await orchestrate(
+                transcription.text, ai_profile, language=reply_language
+            )
 
         await self._conversation.create(
             ConversationHistory(
@@ -150,7 +159,7 @@ class VoiceConversationService:
         audio_base64: str | None = None
         audio_format = "wav"
         try:
-            synthesis = await voice_provider.synthesize(orchestrator_response.answer, language)
+            synthesis = await voice_provider.synthesize(orchestrator_response.answer, reply_language)
             audio_format = synthesis.format
             if synthesis.audio_bytes is not None:
                 import base64

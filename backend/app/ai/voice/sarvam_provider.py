@@ -80,11 +80,19 @@ class SarvamVoiceProvider(VoiceProvider):
         self._sleep: SleepFn = sleep or asyncio.sleep
 
     async def transcribe(self, audio: bytes, language: str) -> TranscriptionResult:
+        # Every recording this app sends comes from the browser's
+        # MediaRecorder, which the frontend always labels "audio/webm" (see
+        # use-voice-companion.ts / use-voice-transcribe.ts) — without
+        # input_audio_codec telling Sarvam that explicitly, it silently
+        # mis-decodes the bytes and returns a 200 with an empty transcript
+        # instead of an error, which is indistinguishable from real silence
+        # further down this method.
         response = await self._with_retry(
             lambda: self._client.speech_to_text.transcribe(
                 file=audio,
                 model=self._stt_model,
                 language_code=language,
+                input_audio_codec="webm",
             )
         )
         if not response.transcript:

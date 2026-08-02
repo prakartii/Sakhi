@@ -1,13 +1,14 @@
 import { useMemo, useState, type SyntheticEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Loader2, PiggyBank, TrendingDown, TrendingUp } from "lucide-react";
+import { Loader2, PiggyBank, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { Page } from "@/components/sakhi/Layout";
 import { RequireAuth, RequireBusinessProfile } from "@/components/sakhi/RouteGuards";
 import { Reveal } from "@/components/sakhi/Reveal";
-import { Craft, Eyebrow, Hero, Pill } from "@/components/sakhi/Cards";
+import { Basis, Craft, Eyebrow, Pill, Hero, Why } from "@/components/sakhi/Cards";
 import { IconBadge } from "@/components/sakhi/CompanionAssets";
 import { useCreateTransaction, useTransactions } from "@/hooks/use-transactions";
+import { useAISummary } from "@/hooks/use-dashboard-data";
 import { ApiError } from "@/lib/api-client";
 import type { Transaction } from "@/lib/types";
 
@@ -194,6 +195,7 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
 function Cashflow() {
   const { data, isLoading } = useTransactions();
   const transactions = data?.items ?? [];
+  const { data: aiSummary, isLoading: aiSummaryLoading, isError: aiSummaryError } = useAISummary();
 
   const { totalIn, totalOut, trend } = useMemo(() => {
     let totalIn = 0;
@@ -282,6 +284,56 @@ function Cashflow() {
         <Craft tone="cream">
           <Eyebrow>Income trend · by month</Eyebrow>
           <TrendLine points={trend} />
+        </Craft>
+      </Reveal>
+
+      <Reveal className="mt-6" delay={40}>
+        <Craft tone="marigold" texture="weave">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-wine" />
+            <Eyebrow>Sakhi's forecast</Eyebrow>
+          </div>
+          {aiSummaryLoading ? (
+            <div className="mt-3 flex items-center gap-2 text-[12.5px] text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Crunching your run-rate…
+            </div>
+          ) : aiSummaryError || !aiSummary ? (
+            <p className="mt-3 text-[12.5px] text-muted-foreground">
+              A forecast will appear once Sakhi has enough transactions to project a trend.
+            </p>
+          ) : (
+            <>
+              <h3 className="mt-2 font-display text-lg font-semibold text-foreground">
+                {aiSummary.narrative}
+              </h3>
+              {aiSummary.highlights.length > 0 && (
+                <ul className="mt-3 space-y-1.5">
+                  {aiSummary.highlights.map((h) => (
+                    <li key={h} className="flex items-start gap-2 text-[12.5px] text-foreground/75">
+                      <span
+                        aria-hidden
+                        className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-wine/60"
+                      />
+                      {h}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {aiSummary.top_actions.length > 0 && (
+                <div className="mt-4 space-y-2.5">
+                  {aiSummary.top_actions.map((a) => (
+                    <div key={a.action} className="rounded-2xl bg-card/70 px-4 py-3">
+                      <p className="text-[12.5px] font-semibold text-foreground">{a.action}</p>
+                      <Why>{a.why}</Why>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Basis>
+                Based on your logged income, projected forward from your recent run-rate.
+              </Basis>
+            </>
+          )}
         </Craft>
       </Reveal>
 

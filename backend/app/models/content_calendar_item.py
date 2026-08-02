@@ -54,6 +54,8 @@ class ContentCalendarItem(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     caption: Mapped[str | None] = mapped_column(Text)
     hashtags: Mapped[list[str] | None] = mapped_column(ARRAY(String))
     image_prompt: Mapped[str | None] = mapped_column(Text)
+    generated_image_url: Mapped[str | None] = mapped_column(Text)
+    generated_video_url: Mapped[str | None] = mapped_column(Text)
     call_to_action: Mapped[str | None] = mapped_column(String(200))
     scheduled_datetime: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[ContentStatus] = mapped_column(

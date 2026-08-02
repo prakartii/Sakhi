@@ -4,6 +4,7 @@ Mirrors app.ai.providers.factory / app.ai.embeddings.factory's pattern.
 
 from functools import lru_cache
 
+from app.ai.image.gemini_provider import GeminiImageProvider
 from app.ai.image.provider import ImageProvider
 from app.ai.image.together_provider import TogetherImageProvider
 from app.ai.providers.base import AIProviderConfigError
@@ -21,3 +22,12 @@ def get_image_provider() -> ImageProvider:
         f"Unsupported IMAGE_PROVIDER={settings.IMAGE_PROVIDER!r}. Add a matching branch in "
         "app.ai.image.factory when a new provider is wired up."
     )
+
+
+@lru_cache
+def get_nano_banana_provider() -> ImageProvider:
+    """Always Gemini's "Nano Banana" model, independent of the
+    IMAGE_PROVIDER setting above — used specifically by Content Calendar
+    and Marketing Studio's reel-visual generation, which want this model
+    regardless of what Website Studio's hero images are configured to use."""
+    return GeminiImageProvider(api_key=settings.GEMINI_API_KEY, model=settings.NANO_BANANA_MODEL)

@@ -24,7 +24,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -63,6 +63,9 @@ class WebsiteVersion(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     favicon: Mapped[str | None] = mapped_column(Text)
     published: Mapped[bool] = mapped_column(Boolean, nullable=False)
     change_notes: Mapped[str | None] = mapped_column(Text)
+    # Snapshot of websites.content/images at record time (migration 26).
+    content: Mapped[dict | None] = mapped_column(JSONB)
+    images: Mapped[dict | None] = mapped_column(JSONB)
 
     # -- relationships ----------------------------------------------------
     website: Mapped["Website"] = relationship(back_populates="versions")

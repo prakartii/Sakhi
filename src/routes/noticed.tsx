@@ -1,11 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Bell } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { AlertTriangle, Bell, Link2, Loader2, TriangleAlert } from "lucide-react";
 import { Page } from "@/components/sakhi/Layout";
+import { RequireAuth, RequireBusinessProfile } from "@/components/sakhi/RouteGuards";
 import { MicPanel } from "@/components/sakhi/MicPanel";
 import { Reveal } from "@/components/sakhi/Reveal";
-import { Action, Basis, Craft, Eyebrow, HandNote, Pill, Why } from "@/components/sakhi/Cards";
+import { Basis, Craft, Eyebrow, HandNote, type Tone, Why } from "@/components/sakhi/Cards";
 import { BotanicalMark, IconBadge } from "@/components/sakhi/CompanionAssets";
 import { StickyNote } from "@/components/sakhi/CompanionHero";
+import { useNoticedSummary } from "@/hooks/use-dashboard-data";
 
 export const Route = createFileRoute("/noticed")({
   head: () => ({
@@ -14,72 +16,73 @@ export const Route = createFileRoute("/noticed")({
       {
         name: "description",
         content:
-          "Five predictive warnings from your own records — what happened, why it matters to your rupees, and the single next step.",
-      },
-      { property: "og:title", content: "Sakhi noticed something before you had to" },
-      {
-        property: "og:description",
-        content: "Predictive intelligence built on your own voice-logged records.",
+          "What's compounding across your stock, revenue and memory this week — connected in one narrative, not a demo.",
       },
     ],
   }),
-  component: Noticed,
+  component: NoticedRoute,
 });
 
-const SIGNALS = [
-  {
-    tag: "Stockout predicted",
-    tone: "marigold" as const,
-    title: "Indigo block-print base cloth will run out in about 8 days.",
-    copy: "You have 14 Rakhi orders promised for that same week — ₹11,200 at risk.",
-    pill: { text: "Protects ₹11,200", tone: "marigold" as const },
-    why: "You've logged 100 metres in on 3 July and 72 metres sold by 28 July — a steady 5.1 metres a day.",
-    action: "Reorder 40 metres from Bagru",
-    span: "lg:col-span-7",
-  },
-  {
-    tag: "Festival demand rising",
-    tone: "rose" as const,
-    title: "Rakhi enquiries jumped from 1 to 5 a week.",
-    copy: "Last Rakhi week you did ₹38,000 — the curve is 6 days ahead of last year.",
-    pill: { text: "Est. +₹15,000", tone: "rose" as const },
-    why: "Paired-piece enquiries always lead your festival sales by about two weeks; the same pattern held for Diwali 2025.",
-    action: "List the ₹899 gift bundle",
-    span: "lg:col-span-5",
-  },
-  {
-    tag: "Sales dip",
-    tone: "indigo" as const,
-    title: "Weekday sales fell 22% over the last 10 days.",
-    copy: "That's roughly ₹4,600 less than your own July average.",
-    pill: { text: "₹4,700 pending too", tone: "indigo" as const },
-    why: "The dip started the day your Bengaluru boutique paused reorders — retail, not demand. Your direct buyers are steady.",
-    action: "Call the boutique buyer",
-    span: "lg:col-span-5",
-  },
-  {
-    tag: "Supplier delay",
-    tone: "rose" as const,
-    title: "Your Bagru dyer is likely to be late again this month.",
-    copy: "Three delays in four months have cost ₹27,000 in slipped orders.",
-    pill: { text: "Avoids ₹9,000/month", tone: "rose" as const },
-    why: "Each delay has landed in the second half of the month, right after his own festival-season bulk orders start.",
-    action: "Add a backup dyer in Sanganer",
-    span: "lg:col-span-7",
-  },
-  {
-    tag: "New scheme match",
-    tone: "leaf" as const,
-    title: "You now match PM Vishwakarma at 92%.",
-    copy: "A ₹15,000 toolkit grant plus collateral-free credit at 5%.",
-    pill: { text: "₹15,000 grant", tone: "leaf" as const },
-    why: "Your craft category, six months of logged sales and Udyam registration cleared the last three conditions you were missing in May.",
-    action: "See eligibility reasoning",
-    span: "lg:col-span-6",
-  },
-];
+function NoticedRoute() {
+  return (
+    <RequireAuth>
+      <RequireBusinessProfile redirectWhen="missing" redirectTo="/business-setup">
+        <Noticed />
+      </RequireBusinessProfile>
+    </RequireAuth>
+  );
+}
+
+function SignalCard({
+  tag,
+  tone,
+  title,
+  copy,
+  actionLabel,
+  actionTo,
+  index,
+}: {
+  tag: string;
+  tone: Tone;
+  title: string;
+  copy: string;
+  actionLabel: string;
+  actionTo: string;
+  index: number;
+}) {
+  return (
+    <Reveal delay={index * 80} className="lg:col-span-6">
+      <Craft tone={tone} texture={index % 2 === 0 ? "weave" : "blockprint"} className="h-full">
+        <Eyebrow>{tag}</Eyebrow>
+        <h3 className="mt-2 font-display text-xl leading-snug font-semibold">{title}</h3>
+        <p className="mt-2 text-[13px] text-foreground/75">{copy}</p>
+        <Link
+          to={actionTo}
+          className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-transform hover:translate-x-0.5"
+        >
+          {actionLabel} <span aria-hidden>→</span>
+        </Link>
+      </Craft>
+    </Reveal>
+  );
+}
 
 function Noticed() {
+  const { data: summary, isLoading } = useNoticedSummary();
+
+  const stockSignals = summary?.stock_signals ?? [];
+  const memorySignals = summary?.memory_signals ?? [];
+  const revenueDeclining = summary?.revenue_declining ?? false;
+  const hasConnection = !!summary?.connected_why;
+
+  const domainsWithSignals =
+    (stockSignals.length > 0 ? 1 : 0) +
+    (revenueDeclining ? 1 : 0) +
+    (memorySignals.length > 0 ? 1 : 0);
+  const signalCount = stockSignals.length + memorySignals.length + (revenueDeclining ? 1 : 0);
+
+  let index = 0;
+
   return (
     <Page>
       <section className="grid items-center gap-10 py-14 lg:grid-cols-[1.15fr_0.85fr]">
@@ -87,7 +90,7 @@ function Noticed() {
           <div className="relative">
             <BotanicalMark className="pointer-events-none absolute -top-8 -left-12 hidden h-48 w-36 opacity-[0.1] lg:block" />
             <span className="relative inline-block rounded-full bg-sand px-3.5 py-1.5 text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-              Predictive intelligence
+              Cross-module intelligence
             </span>
             <h1 className="relative mt-6 font-display font-semibold tracking-tight text-foreground">
               <span className="block text-3xl sm:text-4xl">Sakhi noticed</span>
@@ -97,13 +100,17 @@ function Noticed() {
               </span>
             </h1>
             <p className="relative mt-6 max-w-md text-[15px] leading-relaxed font-light text-muted-foreground sm:text-base">
-              Five things worth your attention this week. Each one says what happened, why it
-              matters to your rupees, and the single next step.
+              Not a matched list, and not something you asked — this is what's compounding across
+              your stock, revenue and memory this week, connected into one picture.
             </p>
             <div className="relative mt-7 flex items-center gap-3 rounded-2xl bg-marigold/60 px-4 py-3">
               <IconBadge icon={Bell} tone="marigold" />
               <p className="text-[13px] font-medium text-wine-soft">
-                5 signals waiting, spotted in your own records
+                {isLoading
+                  ? "Checking your records…"
+                  : signalCount === 0
+                    ? "Nothing urgent spotted yet"
+                    : `${signalCount} signal${signalCount === 1 ? "" : "s"} spotted, ${domainsWithSignals} area${domainsWithSignals === 1 ? "" : "s"} of your business involved`}
               </p>
             </div>
           </div>
@@ -124,27 +131,91 @@ function Noticed() {
 
       <div className="thread opacity-50" />
 
-      <section className="grid gap-5 py-10 lg:grid-cols-12">
-        {SIGNALS.map((s, i) => (
-          <Reveal key={s.title} delay={i * 80} className={s.span}>
-            <Craft tone={s.tone} texture={i % 2 === 0 ? "weave" : "blockprint"} className="h-full">
-              <Eyebrow>{s.tag}</Eyebrow>
-              <h3 className="mt-2 font-display text-xl leading-snug font-semibold">{s.title}</h3>
-              <p className="mt-2 text-[13px] text-foreground/75">{s.copy}</p>
-              <div className="mt-3">
-                <Pill tone={s.pill.tone}>{s.pill.text}</Pill>
-              </div>
-              <Why>{s.why}</Why>
-              <Basis />
-              <Action>{s.action}</Action>
-            </Craft>
-          </Reveal>
-        ))}
-      </section>
+      {isLoading ? (
+        <div className="flex justify-center py-14">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : signalCount === 0 ? (
+        <Reveal>
+          <Craft tone="sand" className="py-10 text-center">
+            <Eyebrow>Nothing urgent yet</Eyebrow>
+            <p className="mt-2 text-[13.5px] text-foreground/75">
+              As you log sales, stock and voice notes, Sakhi starts spotting patterns across them —
+              and connecting the ones that relate to each other.
+            </p>
+          </Craft>
+        </Reveal>
+      ) : (
+        <>
+          {hasConnection && (
+            <Reveal className="py-10">
+              <Craft tone="lilac" texture="weave">
+                <div className="flex items-center gap-2">
+                  <Link2 className="h-4 w-4 text-wine" />
+                  <Eyebrow>What's connected this week</Eyebrow>
+                </div>
+                <Why>{summary!.connected_why}</Why>
+                <Basis>{summary!.connected_basis ?? undefined}</Basis>
+              </Craft>
+            </Reveal>
+          )}
 
-      <HandNote>
-        Five spotted warnings this week. Last month you caught three of them in time.
-      </HandNote>
+          <section className={`grid gap-5 ${hasConnection ? "" : "py-10"} lg:grid-cols-12`}>
+            {stockSignals.map((s) => (
+              <SignalCard
+                key={s.inventory_id}
+                index={index++}
+                tag="Stockout predicted"
+                tone="marigold"
+                title={`${s.item_name} will run out in about ${s.days_remaining} day${s.days_remaining === 1 ? "" : "s"}.`}
+                copy={`${s.current_quantity} ${s.unit} left, based on your own logged sales.`}
+                actionLabel="Reorder in Inventory"
+                actionTo="/inventory"
+              />
+            ))}
+            {revenueDeclining && (
+              <SignalCard
+                index={index++}
+                tag="Revenue dip"
+                tone="indigo"
+                title={`Your weekly revenue is trending down by about ₹${Math.abs(summary?.revenue_trend_per_week ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}/week.`}
+                copy="Worth a look before it compounds — see the full trend and projection."
+                actionLabel="See the trend"
+                actionTo="/analytics"
+              />
+            )}
+            {memorySignals.map((m) => (
+              <SignalCard
+                key={m.business_memory_id}
+                index={index++}
+                tag="Challenge noticed"
+                tone="rose"
+                title={m.title ?? m.content.slice(0, 80)}
+                copy={m.content}
+                actionLabel="See your Memory"
+                actionTo="/memory"
+              />
+            ))}
+          </section>
+        </>
+      )}
+
+      {signalCount > 0 && (
+        <HandNote>
+          {domainsWithSignals >= 2 ? (
+            <>
+              <AlertTriangle className="mr-1 inline h-3.5 w-3.5" />
+              Every signal above traces back to something you actually logged — connected, not
+              guessed.
+            </>
+          ) : (
+            <>
+              <TriangleAlert className="mr-1 inline h-3.5 w-3.5" />
+              Every signal above traces back to something you actually logged.
+            </>
+          )}
+        </HandNote>
+      )}
     </Page>
   );
 }

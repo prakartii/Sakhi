@@ -15,7 +15,7 @@ inventory_movements row — see InventoryService for why that's the point.
 """
 
 import re
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -131,6 +131,21 @@ class InventorySummary(BaseModel):
     total_stock_value: float
     low_stock_count: int
     out_of_stock_count: int
+
+
+class InventoryForecastResponse(BaseModel):
+    """Response for GET /inventory/{id}/forecast — mirrors
+    app.ai.forecasting.schemas.StockoutForecast field-for-field, kept as
+    its own schema (not that type directly) so the API contract can evolve
+    independently of the AI module's internal shape, same as every other
+    module in this project."""
+
+    has_sufficient_data: bool
+    daily_run_rate: float
+    days_of_stock_remaining: float | None = None
+    projected_stockout_date: date | None = None
+    reorder_by_date: date | None = None
+    confidence_score: float
 
 
 # -- stock operations -----------------------------------------------------

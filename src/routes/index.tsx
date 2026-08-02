@@ -14,6 +14,8 @@ import {
 import { FeaturedMetric, NoteMetric, TicketMetric } from "@/components/sakhi/CompanionMetrics";
 import { MorningBriefing, type BriefingTask } from "@/components/sakhi/CompanionBriefing";
 import { Action, Basis, Craft, Eyebrow, Why } from "@/components/sakhi/Cards";
+import { ChatBubble, ChatThinkingBubble } from "@/components/sakhi/WebsiteChatAssets";
+import { useTranslation } from "react-i18next";
 import { useVoiceCompanion } from "@/hooks/use-voice-companion";
 import { useAuth } from "@/hooks/use-auth";
 import { usePrimaryBusinessProfile } from "@/hooks/use-business-profile";
@@ -51,9 +53,8 @@ export const Route = createFileRoute("/")({
   component: Companion,
 });
 
-const DEFAULT_QUOTE = "Tap the mic and tell Sakhi about today — an order, a price, anything.";
-
 function Companion() {
+  const { t } = useTranslation();
   const voice = useVoiceCompanion();
   const { user, loading: authLoading } = useAuth();
   const { profile, hasProfile } = usePrimaryBusinessProfile();
@@ -109,33 +110,33 @@ function Companion() {
     switch (voice.state) {
       case "recording":
         return {
-          title: "Listening…",
-          quote: "Speak now — tap again when you're done.",
-          statusLabel: "Recording",
+          title: t("home.listeningTitle"),
+          quote: t("home.listeningQuote"),
+          statusLabel: t("home.listeningStatus"),
         };
       case "processing":
         return {
-          title: "Thinking…",
-          quote: voice.result ? voice.result.transcript : "Sakhi is making sense of that.",
-          statusLabel: "Processing",
+          title: t("home.thinkingTitle"),
+          quote: voice.result ? voice.result.transcript : t("home.thinkingQuote"),
+          statusLabel: t("home.thinkingStatus"),
         };
       case "speaking":
         return {
-          title: "Sakhi says…",
+          title: t("home.sakhiSaysTitle"),
           quote: voice.result?.answer ?? "",
-          statusLabel: "Speaking",
+          statusLabel: t("home.speakingStatus"),
         };
       case "error":
         return {
-          title: "Talk to Sakhi",
-          quote: voice.errorMessage ?? "Something went wrong — try again.",
-          statusLabel: "Tap to talk",
+          title: t("home.talkToSakhiTitle"),
+          quote: voice.errorMessage ?? t("home.genericError"),
+          statusLabel: t("home.tapToTalkStatus"),
         };
       default:
         return {
-          title: voice.result ? "Sakhi says…" : "Talk to Sakhi",
-          quote: voice.result?.answer ?? DEFAULT_QUOTE,
-          statusLabel: "Tap to talk",
+          title: voice.result ? t("home.sakhiSaysTitle") : t("home.talkToSakhiTitle"),
+          quote: voice.result?.answer ?? t("home.defaultQuote"),
+          statusLabel: t("home.tapToTalkStatus"),
         };
     }
   })();
@@ -152,31 +153,30 @@ function Companion() {
               <BotanicalMark className="pointer-events-none absolute -top-10 -left-14 hidden h-52 w-40 opacity-[0.1] lg:block" />
 
               <span className="relative inline-block rounded-full bg-sand px-3.5 py-1.5 text-[10px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-                Voice Companion
+                {t("home.eyebrow")}
               </span>
 
               <h1 className="relative mt-6 font-display font-semibold tracking-tight text-foreground">
-                <span className="block text-3xl sm:text-4xl">She speaks,</span>
-                <span className="block text-4xl sm:text-5xl">and her day</span>
+                <span className="block text-3xl sm:text-4xl">{t("home.titleLine1")}</span>
+                <span className="block text-4xl sm:text-5xl">{t("home.titleLine2")}</span>
                 <span className="relative inline-block text-5xl text-wine italic sm:text-6xl">
-                  appears.
+                  {t("home.titleAccent")}
                   <Heart className="absolute -top-1 -right-7 h-4 w-4 -rotate-12 text-wine/40" />
                 </span>
               </h1>
 
               <p className="relative mt-6 max-w-md text-[15px] leading-relaxed font-light text-muted-foreground sm:text-base">
-                One check-in in your own language. Sakhi remembers every order, price and supplier —
-                then tells you what to do next.
+                {t("home.copy")}
               </p>
 
               <div className="relative mt-8 flex flex-wrap gap-2.5">
-                <TrustChip>Voice-first</TrustChip>
-                <TrustChip>Remembers everything</TrustChip>
-                <TrustChip>7 Indian languages</TrustChip>
+                <TrustChip>{t("home.trustVoiceFirst")}</TrustChip>
+                <TrustChip>{t("home.trustRemembers")}</TrustChip>
+                <TrustChip>{t("home.trustLanguages")}</TrustChip>
               </div>
 
               <StickyNote rotate={-3} className="relative z-10 mt-9">
-                ✎ she remembers, so you don't have to
+                {t("home.stickyNote")}
               </StickyNote>
             </div>
           </Reveal>
@@ -186,7 +186,7 @@ function Companion() {
               {hasProfile && (
                 <MemoryCard
                   tone="leaf"
-                  label="Today"
+                  label={t("home.todayLabel")}
                   rotate={-3}
                   className="relative z-20 mb-4 lg:absolute lg:top-0 lg:-left-6 lg:mb-0"
                 >
@@ -194,7 +194,9 @@ function Companion() {
                     ₹{todaysSales.toLocaleString("en-IN")}
                   </p>
                   <p className="mt-1 text-[11px] font-normal text-foreground/60">
-                    {todaysOrderCount} {todaysOrderCount === 1 ? "order" : "orders"} in
+                    {todaysOrderCount}{" "}
+                    {t(todaysOrderCount === 1 ? "home.ordersSuffixOne" : "home.ordersSuffixMany")}{" "}
+                    in
                   </p>
                 </MemoryCard>
               )}
@@ -211,27 +213,51 @@ function Companion() {
 
               <VoiceCard
                 {...voiceCardProps}
-                languages="हिंदी · বাংলা · தமிழ் · తెలుగు · मराठी · ગુજરાતી · ಕನ್ನಡ"
+                languages="हिंदी · বাংলা · தமிழ் · తెలుగు · मराठी · ਪੰਜਾਬੀ · മലയാളം · অসমীয়া · ગુજરાતી · ಕನ್ನಡ"
                 className="relative z-10"
                 isRecording={voice.isRecording}
                 isBusy={voice.isBusy}
                 onMicClick={voice.isRecording ? voice.stopRecording : voice.startRecording}
               />
-
               {inventorySummary.data && inventorySummary.data.low_stock_count > 0 && (
                 <StatusPill
                   tone="rose"
                   rotate={-2}
                   className="relative z-20 mt-4 ml-auto w-fit lg:absolute lg:-bottom-3 lg:left-6 lg:mt-0"
                 >
-                  {inventorySummary.data.low_stock_count} item
-                  {inventorySummary.data.low_stock_count === 1 ? "" : "s"} low on stock
+                  {inventorySummary.data.low_stock_count}{" "}
+                  {t(
+                    inventorySummary.data.low_stock_count === 1
+                      ? "home.lowStockSuffixOne"
+                      : "home.lowStockSuffixMany",
+                  )}
                 </StatusPill>
               )}
             </div>
           </Reveal>
         </div>
       </section>
+
+      {voice.messages.length > 0 && (
+        <Reveal>
+          <section className="py-4">
+            <div className="card-soft mx-auto max-w-2xl overflow-hidden rounded-3xl">
+              <div className="flex items-center gap-2 border-b border-clay/15 bg-sand/60 px-4 py-3">
+                <Sparkles className="h-4 w-4 text-wine" />
+                <p className="text-[12.5px] font-semibold text-foreground">
+                  {t("home.yourConversation")}
+                </p>
+              </div>
+              <div className="max-h-96 space-y-3 overflow-y-auto px-4 py-4">
+                {voice.messages.map((message, i) => (
+                  <ChatBubble key={`${message.created_at}-${i}`} message={message} />
+                ))}
+                {voice.state === "processing" && <ChatThinkingBubble />}
+              </div>
+            </div>
+          </section>
+        </Reveal>
+      )}
 
       <StitchDivider className="opacity-50" />
 

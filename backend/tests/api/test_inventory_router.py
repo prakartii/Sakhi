@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 
 import pytest
 
+from app.ai.forecasting.schemas import StockoutForecast
 from app.api.v1.endpoints import inventory as endpoint_module
 from app.main import app
 from app.models.enums import InventoryMovementType
@@ -35,6 +36,7 @@ class _FakeService:
         self.movements: list[InventoryMovement] = []
         self.raise_on_create: Exception | None = None
         self.raise_on_stock_out: Exception | None = None
+        self.forecast_override: StockoutForecast | None = None
 
     async def create(self, payload):
         if self.raise_on_create:
@@ -192,6 +194,14 @@ class _FakeService:
         if movement_type is not None:
             items = [m for m in items if m.movement_type == movement_type]
         return items[offset : offset + limit], len(items)
+
+    async def get_forecast(self, inventory_id, *, window_days=30, lead_time_days=None):
+        await self.get(inventory_id)
+        if self.forecast_override is not None:
+            return self.forecast_override
+        return StockoutForecast(
+            has_sufficient_data=False, daily_run_rate=0.0, confidence_score=0.0
+        )
 
 
 @pytest.fixture
@@ -494,6 +504,48 @@ async def test_summary_route_does_not_collide_with_get_by_id(client, fake_servic
     assert body["total_stock_value"] == 20.0
 
 
+# -- forecast (app.ai.forecasting.stockout) ---------------------------------
+
+
+async def test_forecast_missing_product_returns_404(client, fake_service):
+    response = await client.get(f"{BASE_URL}/{uuid.uuid4()}/forecast")
+    assert response.status_code == 404
+
+
+async def test_forecast_insufficient_data_reports_false(client, fake_service):
+    create_resp = await _create_product(client, current_quantity=10)
+    product_id = create_resp.json()["id"]
+
+    response = await client.get(f"{BASE_URL}/{product_id}/forecast")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["has_sufficient_data"] is False
+    assert body["projected_stockout_date"] is None
+
+
+async def test_forecast_returns_projected_dates_when_available(client, fake_service):
+    create_resp = await _create_product(client, current_quantity=10)
+    product_id = create_resp.json()["id"]
+    fake_service.forecast_override = StockoutForecast(
+        has_sufficient_data=True,
+        daily_run_rate=2.0,
+        days_of_stock_remaining=5.0,
+        projected_stockout_date="2026-08-10",
+        reorder_by_date="2026-08-05",
+        confidence_score=80.0,
+    )
+
+    response = await client.get(f"{BASE_URL}/{product_id}/forecast")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["has_sufficient_data"] is True
+    assert body["days_of_stock_remaining"] == 5.0
+    assert body["projected_stockout_date"] == "2026-08-10"
+    assert body["reorder_by_date"] == "2026-08-05"
+
+
 async def test_openapi_schema_documents_inventory_routes(client, fake_service):
     response = await client.get("/openapi.json")
 
@@ -508,5 +560,6 @@ async def test_openapi_schema_documents_inventory_routes(client, fake_service):
     assert f"{BASE_URL}/{{inventory_id}}/stock-out" in paths
     assert f"{BASE_URL}/{{inventory_id}}/adjust" in paths
     assert f"{BASE_URL}/{{inventory_id}}/movements" in paths
+    assert f"{BASE_URL}/{{inventory_id}}/forecast" in paths
     assert set(paths[BASE_URL]) >= {"post", "get"}
     assert set(paths[f"{BASE_URL}/{{inventory_id}}"]) >= {"get", "patch", "delete"}

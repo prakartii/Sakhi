@@ -13,6 +13,10 @@ from pydantic import BaseModel, Field
 
 PostType = Literal["post", "reel", "carousel", "story"]
 
+CampaignFocus = Literal[
+    "general", "festival", "product_launch", "promotional_offer", "bundle_idea"
+]
+
 
 class ScheduledSlot(BaseModel):
     """One rule-decided calendar slot: date, platform, post type, and

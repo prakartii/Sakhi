@@ -41,3 +41,18 @@ export function useUpdateBrandAsset(brandAssetId: string | undefined) {
     },
   });
 }
+
+/** AI-recommends a logo (app.ai.image, kind="logo") from the brand's own
+ * name/tagline/voice/palette and saves it as logo_url (POST
+ * /brand-assets/{id}/generate-logo). Calling it again replaces the
+ * previous recommendation — nothing keeps a history of past attempts. */
+export function useGenerateLogo(brandAssetId: string | undefined) {
+  const queryClient = useQueryClient();
+  const { profile } = usePrimaryBusinessProfile();
+  return useMutation({
+    mutationFn: () => api.post<BrandAsset>(`/brand-assets/${brandAssetId}/generate-logo`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: brandAssetsQueryKey(profile?.id) });
+    },
+  });
+}

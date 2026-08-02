@@ -33,6 +33,8 @@ import uuid
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.forecasting.schemas import StockoutForecast, UsagePoint
+from app.ai.forecasting.stockout import forecast_stockout
 from app.core.logging import get_logger
 from app.models.enums import InventoryMovementType
 from app.models.inventory import Inventory
@@ -46,6 +48,13 @@ from app.schemas.inventory import (
     StockInRequest,
     StockOutRequest,
 )
+
+# Movement types that count as consumption for run-rate purposes — restocks
+# and returns add stock back, adjustments aren't necessarily sales, so only
+# these two feed app.ai.forecasting.stockout (matches its UsagePoint
+# docstring: "net units consumed", not net stock change).
+_CONSUMPTION_MOVEMENT_TYPES = (InventoryMovementType.SALE, InventoryMovementType.WASTAGE)
+_FORECAST_MOVEMENT_LOOKBACK_LIMIT = 200
 
 logger = get_logger(__name__)
 
@@ -321,6 +330,35 @@ class InventoryService:
             quantity_after,
         )
         return item
+
+    async def get_forecast(
+        self,
+        inventory_id: uuid.UUID,
+        *,
+        window_days: int = 30,
+        lead_time_days: int | None = None,
+    ) -> StockoutForecast:
+        """AI-projected stockout date via app.ai.forecasting.stockout —
+        deterministic run-rate math over this item's own consumption
+        history (sale + wastage movements), not an LLM call. See
+        app.ai.forecasting.stockout.forecast_stockout for how
+        has_sufficient_data/confidence_score are derived.
+        """
+        item = await self.get(inventory_id)
+        movements, _ = await self._movement_repo.list_by_inventory(
+            inventory_id, limit=_FORECAST_MOVEMENT_LOOKBACK_LIMIT
+        )
+        usage = [
+            UsagePoint(movement_date=movement.movement_date.date(), quantity=float(movement.quantity))
+            for movement in movements
+            if movement.movement_type in _CONSUMPTION_MOVEMENT_TYPES
+        ]
+        return forecast_stockout(
+            usage,
+            current_quantity=float(item.current_quantity),
+            window_days=window_days,
+            lead_time_days=lead_time_days,
+        )
 
     async def list_movements(
         self,

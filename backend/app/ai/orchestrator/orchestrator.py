@@ -35,6 +35,7 @@ async def handle(
     *,
     session: AsyncSession | None = None,
     top_k_memories: int = DEFAULT_MEMORY_TOP_K,
+    language: str = "en-IN",
     provider: AIProvider | None = None,
     embedding_provider: EmbeddingProvider | None = None,
 ) -> OrchestratorResponse:
@@ -50,6 +51,11 @@ async def handle(
     place this touches a database, and only via a caller-supplied
     AsyncSession. Retrieval is skipped entirely (empty `sources`) when no
     session is given, so this remains fully testable without a database.
+
+    `language` is a BCP-47 code (see prompts.LANGUAGE_NAMES) the answer
+    should be written in — callers with a spoken transcript should pass
+    the detected/selected language through so the reply matches what gets
+    spoken back via TTS; text-only callers can omit it for English.
 
     Raises ValueError on an empty request. Raises AIProviderResponseError
     if the model's output doesn't match the expected schema.
@@ -86,7 +92,12 @@ async def handle(
     ai = provider or get_ai_provider()
     messages: list[ChatMessage] = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": build_user_message(profile, request, used_services, facts)},
+        {
+            "role": "user",
+            "content": build_user_message(
+                profile, request, used_services, facts, language=language
+            ),
+        },
     ]
 
     raw = await ai.chat_json(messages, temperature=0.4)

@@ -8,7 +8,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, ForeignKey, Index, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -45,6 +45,10 @@ class Website(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     published: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="false"
     )
+    # Chat-curation fields (migration 26) — see that migration's comments.
+    content: Mapped[dict | None] = mapped_column(JSONB)
+    images: Mapped[dict | None] = mapped_column(JSONB)
+    preview_slug: Mapped[str | None] = mapped_column(String(80))
 
     # -- relationships ----------------------------------------------------
     # ON DELETE CASCADE is enforced by the database (the FK above), not by
@@ -67,4 +71,10 @@ Index(
     Website.custom_domain,
     unique=True,
     postgresql_where=(Website.custom_domain.isnot(None)),
+)
+Index(
+    "uq_websites_preview_slug",
+    Website.preview_slug,
+    unique=True,
+    postgresql_where=(Website.preview_slug.isnot(None)),
 )

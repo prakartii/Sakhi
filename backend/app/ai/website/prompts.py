@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.ai.brand.models import BrandKit
 from app.ai.business.models import BusinessProfile
+from app.ai.website.models import WebsiteSpec
 
 SYSTEM_PROMPT = """You are the Website Studio for Sakhi, an AI business \
 companion for Indian women micro-entrepreneurs. Given a business profile \
@@ -57,6 +58,66 @@ Rules:
   "seo.description": under 160 characters, includes what they sell and \
   where. "seo.keywords": 5-8 relevant search terms.
 """
+
+
+CHAT_SYSTEM_PROMPT = """You are the Website Studio chat assistant for \
+Sakhi, an AI business companion for Indian women micro-entrepreneurs. You \
+help a business owner build their one-page website through conversation, \
+one message at a time — sometimes the first message ever (nothing exists \
+yet), sometimes a follow-up refining a site you already wrote.
+
+Respond with a single JSON object matching exactly this shape:
+
+{
+  "reply": string,
+  "site": {
+    "pages": {
+      "landing": {
+        "hero": {"headline": string, "subhead": string, "cta": string},
+        "sections": [{"type": string, "heading": string, "body": string}]
+      },
+      "about": {"body": string},
+      "products": [{"name": string, "description": string, "price": number or null}],
+      "contact": {"body": string},
+      "faq": [{"q": string, "a": string}]
+    },
+    "seo": {"title": string, "description": string, "keywords": [string]}
+  }
+}
+
+Rules:
+- If "Current site" below is "none yet", this is the first message: \
+  create a complete initial site grounded in the business profile and \
+  brand kit (same rules as a from-scratch generation — real products \
+  only, brand voice throughout), and "reply" is a short, warm 1-2 \
+  sentence welcome describing what you built.
+- If a current site IS given, treat it as the source of truth: apply \
+  ONLY the change the owner's message asks for, and copy every other \
+  field over completely unchanged — never regenerate the whole site from \
+  scratch on a small request. "reply" is 1-2 sentences in past tense \
+  describing exactly what changed (e.g. "I've warmed up the hero \
+  headline and added a shipping FAQ.").
+- Never invent a product that isn't in the business profile's product \
+  list, on any turn.
+- If the owner's message asks for something outside what a one-page \
+  business website supports (real code, a totally different business, \
+  something that isn't about this site), say so plainly in "reply" and \
+  return the current site UNCHANGED — never invent unsupported behavior.
+"""
+
+
+def build_chat_user_message(
+    profile: BusinessProfile,
+    brand: BrandKit,
+    message: str,
+    current_site: WebsiteSpec | None,
+) -> str:
+    context = build_user_message(profile, brand)
+    if current_site is None:
+        site_block = "Current site: none yet — this is the first message.\n\n"
+    else:
+        site_block = f"Current site (JSON):\n{current_site.model_dump_json()}\n\n"
+    return f"{context}\n{site_block}Owner's message: {message.strip()}"
 
 
 def build_user_message(profile: BusinessProfile, brand: BrandKit) -> str:

@@ -171,11 +171,37 @@ export async function postVoiceTranscribe(params: {
   return data as VoiceTranscribeResponse;
 }
 
+/** Multipart POST — same JSON-or-throw contract as `api.post`, but for
+ * endpoints that take a FormData body (file uploads) instead of a JSON
+ * one. See postVoiceConverse/postVoiceTranscribe above for the
+ * hand-written version of this same shape; new multipart endpoints should
+ * use this instead of duplicating it. */
+async function postForm<T>(path: string, form: FormData): Promise<T> {
+  const headers = await authHeaders();
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+
+  const text = await response.text();
+  const data: unknown = text ? JSON.parse(text) : undefined;
+  if (!response.ok) {
+    const message =
+      (data && typeof data === "object" && "detail" in data
+        ? String((data as { detail: unknown }).detail)
+        : undefined) ?? `Request failed with status ${response.status}`;
+    throw new ApiError(response.status, message, data);
+  }
+  return data as T;
+}
+
 export const api = {
   get: <T>(path: string, query?: QueryParams, signal?: AbortSignal) =>
     request<T>("GET", path, { query, signal }),
   post: <T>(path: string, body?: unknown, query?: QueryParams) =>
     request<T>("POST", path, { body, query }),
+  postForm: <T>(path: string, form: FormData) => postForm<T>(path, form),
   patch: <T>(path: string, body?: unknown, query?: QueryParams) =>
     request<T>("PATCH", path, { body, query }),
   put: <T>(path: string, body?: unknown, query?: QueryParams) =>

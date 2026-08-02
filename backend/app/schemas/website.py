@@ -41,6 +41,7 @@ class WebsiteBase(BaseModel):
     custom_domain: Annotated[str | None, Field(max_length=255)] = None
     favicon: Annotated[str | None, Field(max_length=2048)] = None
     published: bool = False
+    preview_slug: Annotated[str | None, Field(max_length=80)] = None
 
     @field_validator("website_name")
     @classmethod
@@ -110,6 +111,10 @@ class WebsiteRead(WebsiteBase):
 
     id: UUID
     business_profile_id: UUID
+    # AI-authored, not settable via WebsiteCreate/WebsiteUpdate — see
+    # WebsiteService.update_content(), the only writer of these two.
+    content: dict | None = None
+    images: dict | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -140,6 +145,8 @@ class WebsiteVersionRead(BaseModel):
     favicon: str | None
     published: bool
     change_notes: str | None
+    content: dict | None = None
+    images: dict | None = None
     created_at: datetime
     updated_at: datetime
 

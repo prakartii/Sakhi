@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from app.models.inventory import Inventory
     from app.models.language import Language
     from app.models.marketing_analytics_snapshot import MarketingAnalyticsSnapshot
+    from app.models.marketing_content_analysis import MarketingContentAnalysis
     from app.models.mentor_match import MentorMatch
     from app.models.notification import Notification
     from app.models.opportunity_match import OpportunityMatch
@@ -175,6 +176,9 @@ class BusinessProfile(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     marketing_analytics_snapshots: Mapped[list["MarketingAnalyticsSnapshot"]] = (
         relationship(back_populates="business_profile")
+    )
+    marketing_content_analyses: Mapped[list["MarketingContentAnalysis"]] = relationship(
+        back_populates="business_profile"
     )
 
 

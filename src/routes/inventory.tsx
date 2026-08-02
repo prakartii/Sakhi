@@ -9,6 +9,7 @@ import { Action, Basis, Craft, Eyebrow, Hero, Meter, Pill } from "@/components/s
 import { IconBadge } from "@/components/sakhi/CompanionAssets";
 import {
   useCreateInventoryItem,
+  useInventoryForecast,
   useInventoryList,
   useInventorySummary,
   useStockAction,
@@ -47,6 +48,7 @@ function stockPercent(item: InventoryItem): number {
 
 function ItemCard({ item }: { item: InventoryItem }) {
   const stockAction = useStockAction(item.id);
+  const { data: forecast } = useInventoryForecast(item.id);
   const pct = stockPercent(item);
   const isLow = item.current_quantity <= item.reorder_level;
   const isOut = item.current_quantity <= 0;
@@ -72,12 +74,32 @@ function ItemCard({ item }: { item: InventoryItem }) {
         {isOut && <Pill tone="rose">Out of stock</Pill>}
         {!isOut && isLow && <Pill tone="marigold">Low stock — reorder soon</Pill>}
         {item.selling_price != null && <Pill tone="indigo">₹{item.selling_price} each</Pill>}
+        {!isOut && forecast?.has_sufficient_data && forecast.days_of_stock_remaining != null && (
+          <Pill tone={forecast.days_of_stock_remaining <= 7 ? "rose" : "leaf"}>
+            Runs out in ~{Math.round(forecast.days_of_stock_remaining)} days
+          </Pill>
+        )}
       </div>
       <Basis>
         {item.unit_cost != null
           ? `Stock value at cost: ₹${(item.unit_cost * item.current_quantity).toLocaleString("en-IN")}`
           : "No cost recorded for this item."}
       </Basis>
+      {!isOut && forecast && !forecast.has_sufficient_data && (
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Not enough sales history yet to project a stockout date.
+        </p>
+      )}
+      {!isOut && forecast?.reorder_by_date && (
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Sakhi suggests reordering by{" "}
+          {new Date(forecast.reorder_by_date).toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+          })}
+          .
+        </p>
+      )}
       <div className="mt-3 flex gap-2">
         <button
           type="button"

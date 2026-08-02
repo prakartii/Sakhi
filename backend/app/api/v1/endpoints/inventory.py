@@ -25,6 +25,7 @@ from app.api.deps import get_db_session
 from app.models.enums import InventoryMovementType
 from app.schemas.inventory import (
     InventoryCreate,
+    InventoryForecastResponse,
     InventoryListResponse,
     InventoryMovementListResponse,
     InventoryRead,
@@ -206,6 +207,33 @@ async def list_product_movements(
     return InventoryMovementListResponse(
         items=items, total=total, limit=limit, offset=offset
     )
+
+
+@router.get(
+    "/{inventory_id}/forecast",
+    response_model=InventoryForecastResponse,
+    summary="AI-projected stockout date for a product (app.ai.forecasting, deterministic run-rate)",
+    responses={404: {"description": "Product not found"}},
+)
+async def get_product_forecast(
+    inventory_id: uuid.UUID,
+    window_days: int = Query(30, ge=7, le=90, description="Lookback window for the consumption rate."),
+    lead_time_days: int | None = Query(
+        None, ge=0, le=180, description="Supplier lead time, for a reorder-by date."
+    ),
+    service: InventoryService = Depends(get_service),
+) -> InventoryForecastResponse:
+    """Projects when this product runs out from its own sale/wastage
+    history — no LLM, see app.ai.forecasting.stockout.forecast_stockout.
+    `has_sufficient_data=False` (with no projected dates) means there's
+    too little history yet, not that the product is safe."""
+    try:
+        forecast = await service.get_forecast(
+            inventory_id, window_days=window_days, lead_time_days=lead_time_days
+        )
+    except InventoryNotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Product not found.") from exc
+    return InventoryForecastResponse(**forecast.model_dump())
 
 
 @router.patch(

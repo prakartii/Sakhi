@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { usePrimaryBusinessProfile } from "@/hooks/use-business-profile";
-import type { InventoryItem, InventoryListResponse, InventorySummary } from "@/lib/types";
+import type {
+  InventoryForecast,
+  InventoryItem,
+  InventoryListResponse,
+  InventorySummary,
+} from "@/lib/types";
 
 function inventoryQueryKey(profileId: string | undefined) {
   return ["inventory", profileId];
@@ -60,6 +65,17 @@ export function useCreateInventoryItem() {
       void queryClient.invalidateQueries({ queryKey: inventoryQueryKey(profile?.id) });
       void queryClient.invalidateQueries({ queryKey: inventorySummaryQueryKey(profile?.id) });
     },
+  });
+}
+
+/** Per-item "runs out in ~N days" projection — GET /inventory/{id}/forecast,
+ * app.ai.forecasting.stockout (deterministic run-rate, not an LLM call). */
+export function useInventoryForecast(inventoryId: string) {
+  return useQuery({
+    queryKey: ["inventory-forecast", inventoryId],
+    queryFn: () => api.get<InventoryForecast>(`/inventory/${inventoryId}/forecast`),
+    enabled: !!inventoryId,
+    retry: false,
   });
 }
 

@@ -1,11 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { BookOpen, Loader2, Sparkles } from "lucide-react";
+import { BookOpen, Loader2, Search, Sparkles } from "lucide-react";
 import { Page } from "@/components/sakhi/Layout";
 import { RequireAuth, RequireBusinessProfile } from "@/components/sakhi/RouteGuards";
 import { MicPanel } from "@/components/sakhi/MicPanel";
 import { Reveal } from "@/components/sakhi/Reveal";
-import { Basis, Craft, Eyebrow, HandNote, Pill } from "@/components/sakhi/Cards";
+import { Basis, Craft, Eyebrow, HandNote, Pill, Why } from "@/components/sakhi/Cards";
 import { BotanicalMark, SpiralEdge } from "@/components/sakhi/CompanionAssets";
 import { MemoryCard, StatusPill, StickyNote, TrustChip } from "@/components/sakhi/CompanionHero";
 import {
@@ -14,7 +14,7 @@ import {
   MemoryDot,
   PostageStamp,
 } from "@/components/sakhi/MemoryAssets";
-import { useBusinessMemories } from "@/hooks/use-memories";
+import { useBusinessMemories, useMemoryInsights, useSearchMemories } from "@/hooks/use-memories";
 import type { BusinessMemory } from "@/lib/types";
 
 export const Route = createFileRoute("/memory")({
@@ -63,6 +63,9 @@ function formatDate(value: string | null): string {
 function Memory() {
   const { data, isLoading } = useBusinessMemories();
   const memories = data?.items ?? [];
+  const { data: aiInsights, isLoading: aiInsightsLoading } = useMemoryInsights();
+  const [searchInput, setSearchInput] = useState("");
+  const { data: searchResults, isFetching: isSearching } = useSearchMemories(searchInput);
 
   const insights = useMemo(() => {
     if (memories.length === 0) return null;
@@ -171,6 +174,55 @@ function Memory() {
 
       <div className="thread opacity-50" />
 
+      <section className="py-10">
+        <Reveal>
+          <div className="flex items-center gap-2 text-foreground/70">
+            <Search className="h-4 w-4" />
+            <p className="text-sm font-semibold">Ask your memory</p>
+          </div>
+          <div className="mt-3 flex items-center gap-2 rounded-2xl border border-clay/25 bg-card px-4 py-2.5">
+            <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="e.g. what happened with pricing?"
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+            />
+            {isSearching && (
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          <p className="mt-1.5 text-[11px] text-muted-foreground">
+            Ranked by meaning, not just matching words — powered by semantic search over everything
+            Sakhi remembers.
+          </p>
+        </Reveal>
+
+        {searchInput.trim() && (
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {!isSearching && searchResults?.results.length === 0 ? (
+              <p className="text-[12.5px] text-muted-foreground sm:col-span-2 lg:col-span-3">
+                Nothing matched that yet.
+              </p>
+            ) : (
+              searchResults?.results.map((r, i) => (
+                <Reveal key={r.business_memory_id} delay={i * 60}>
+                  <Craft tone="indigo" texture="weave">
+                    <Eyebrow>{Math.round(r.similarity * 100)}% match</Eyebrow>
+                    <h3 className="mt-1.5 font-display text-base font-semibold">
+                      {r.title ?? "Memory"}
+                    </h3>
+                    <p className="mt-1 text-[12.5px] text-foreground/75">{r.content}</p>
+                  </Craft>
+                </Reveal>
+              ))
+            )}
+          </div>
+        )}
+      </section>
+
+      <div className="thread opacity-50" />
+
       <section className="grid gap-5 py-10 lg:grid-cols-[1.35fr_0.95fr]">
         <div className="relative space-y-5">
           <div className="mb-1 flex items-center gap-2 text-foreground/70">
@@ -224,6 +276,16 @@ function Memory() {
             <BotanicalMark className="pointer-events-none absolute -top-6 -right-8 h-32 w-28 opacity-[0.1]" />
             <Eyebrow>Memory insights</Eyebrow>
             <h3 className="mt-2 font-display text-xl font-semibold">What your memory says</h3>
+            {aiInsightsLoading ? (
+              <div className="mt-3 flex items-center gap-2 text-[12px] text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sakhi is thinking it over…
+              </div>
+            ) : aiInsights ? (
+              <>
+                <Why>{aiInsights.why}</Why>
+                <Basis>{aiInsights.basis}</Basis>
+              </>
+            ) : null}
             {insights ? (
               <div className="mt-4 space-y-3">
                 <div className="flex items-start gap-3 rounded-2xl border border-clay/20 bg-card/80 px-4 py-3">

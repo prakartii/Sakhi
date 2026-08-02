@@ -49,6 +49,7 @@ from app.models.social_media_connection import SocialMediaConnection
 from app.models.content_calendar_item import ContentCalendarItem
 from app.models.scheduled_post import ScheduledPost
 from app.models.marketing_analytics_snapshot import MarketingAnalyticsSnapshot
+from app.models.marketing_content_analysis import MarketingContentAnalysis
 
 __all__ = [
     "Language",
@@ -79,4 +80,5 @@ __all__ = [
     "ContentCalendarItem",
     "ScheduledPost",
     "MarketingAnalyticsSnapshot",
+    "MarketingContentAnalysis",
 ]

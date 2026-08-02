@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Heart, IndianRupee, Users2, Video } from "lucide-react";
+import { Heart, Loader2, Percent, UserCheck, Users2 } from "lucide-react";
 import { Page } from "@/components/sakhi/Layout";
 import { MicPanel } from "@/components/sakhi/MicPanel";
 import { Reveal } from "@/components/sakhi/Reveal";
-import { Action, Basis, Craft, Eyebrow, HandNote, Pill, Why } from "@/components/sakhi/Cards";
+import { Action, Basis, Craft, Eyebrow, type Tone, Why } from "@/components/sakhi/Cards";
 import { IconBadge, WashiTape } from "@/components/sakhi/CompanionAssets";
+import { useMentorMatches } from "@/hooks/use-mentors";
+import type { MentorMatch } from "@/lib/types";
 
 export const Route = createFileRoute("/mentors")({
   head: () => ({
@@ -13,90 +15,97 @@ export const Route = createFileRoute("/mentors")({
       {
         name: "description",
         content:
-          "Mentors matched to the exact problem in your records — supplier risk, pricing, marketplace listing — with the reason each one fits.",
+          "Mentors matched to your own business profile — expertise and availability, with the reason each one fits.",
       },
       { property: "og:title", content: "Mentors — Sakhi" },
       {
         property: "og:description",
-        content: "Matched to the exact problem your records show this month.",
+        content: "Matched to your own business profile, not a directory to scroll through.",
       },
     ],
   }),
   component: Mentors,
 });
 
-const MENTORS = [
-  {
-    name: "Shabnam Qureshi",
-    role: "Block-print exporter · Bagru, 14 years",
-    match: "93% match",
-    copy: "Runs three dyers on rotation and has never missed a festival order.",
-    pill: { text: "Solves your ₹27,000 supplier risk", tone: "rose" as const },
-    tone: "rose" as const,
-    why: "Your three logged Bagru delays are the exact problem she solved in 2019 by splitting lots across Sanganer and Bagru.",
-    action: "Request 30 minutes",
-    span: "lg:col-span-7",
-  },
-  {
-    name: "Lakshmi Iyer",
-    role: "Pricing & margin coach · Yuukke Catalyst",
-    match: "89% match",
-    copy: "Works with craft sellers on cost-plus pricing that survives raw-material swings.",
-    pill: { text: "Protects ₹2,740/month", tone: "marigold" as const },
-    tone: "marigold" as const,
-    why: "Your costs are rising 36% against 18% sales growth — her price-ladder method is built for exactly this squeeze.",
-    action: "Book a session",
-    span: "lg:col-span-5",
-  },
-  {
-    name: "Priya Nandakumar",
-    role: "ONDC & marketplace seller · Coimbatore",
-    match: "86% match",
-    copy: "Took a 6-piece handloom catalogue to ₹40,000 a month online in nine months.",
-    pill: { text: "Unlocks ₹25,000/month channel", tone: "leaf" as const },
-    tone: "leaf" as const,
-    why: "Photos and GST are your last two Marketplace-Ready steps — the same two she cleared before her first online sale.",
-    action: "Ask how she listed",
-    span: "lg:col-span-5",
-  },
-  {
-    name: "Farida Bano",
-    role: "Peer entrepreneur · Sanganer",
-    match: "84% match",
-    copy: "Buys the same cotton base cloth in the same lot sizes as you.",
-    pill: { text: "Saves ₹18/metre together", tone: "indigo" as const },
-    tone: "indigo" as const,
-    why: "A peer, not a teacher — your combined 300-metre order clears the mill's bulk band that neither of you reaches alone.",
-    action: "Send an introduction",
-    span: "lg:col-span-7",
-  },
-];
+const CARD_TONES: Tone[] = ["rose", "marigold", "leaf", "indigo"];
 
-const STATS = [
-  {
-    label: "Mentors matched",
-    value: "4",
-    sub: "to problems in your own records",
-    icon: Users2,
-    tone: "lilac" as const,
-  },
-  {
-    label: "Sessions taken",
-    value: "7",
-    sub: "since February",
-    icon: Video,
-    tone: "indigo" as const,
-  },
-  {
-    label: "Value traced back",
-    value: "₹31,000",
-    sub: "from the June pricing session",
-    icon: IndianRupee,
-    tone: "leaf" as const,
-  },
-];
+function MentorCard({ mentor, index }: { mentor: MentorMatch; index: number }) {
+  const tone = CARD_TONES[index % CARD_TONES.length]!;
+  const roundedMatch = Math.round(mentor.match_score);
+  return (
+    <Craft tone={tone} texture={index % 2 === 0 ? "weave" : "blockprint"} className="h-full">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          {mentor.avatar_url ? (
+            <img
+              src={mentor.avatar_url}
+              alt={mentor.full_name}
+              className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-wine/20"
+            />
+          ) : (
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-card font-display text-sm text-wine ring-1 ring-wine/20">
+              {mentor.full_name.charAt(0)}
+            </span>
+          )}
+          <span className="min-w-0">
+            <span className="block truncate font-display text-lg font-semibold">
+              {mentor.full_name}
+            </span>
+            <span className="block text-[11px] text-muted-foreground">
+              {mentor.industry_focus ?? "Mentor"}
+              {mentor.years_experience ? ` · ${mentor.years_experience} years` : ""}
+            </span>
+          </span>
+        </div>
+        <span className="shrink-0 text-[11px] font-semibold text-wine">{roundedMatch}% match</span>
+      </div>
+      {mentor.bio ? <p className="mt-3 text-[13px] text-foreground/75">{mentor.bio}</p> : null}
+      <p className="mt-2 text-[11px] text-muted-foreground">
+        {mentor.availability_status === "available"
+          ? "Available now"
+          : mentor.availability_status === "busy"
+            ? "Currently busy — worth a request anyway"
+            : "Not currently available"}
+      </p>
+      <Why>{mentor.why}</Why>
+      <Basis>{mentor.basis}</Basis>
+      <Action>Request 30 minutes</Action>
+    </Craft>
+  );
+}
 
 function Mentors() {
+  const { data, isLoading, isError } = useMentorMatches();
+  const items = data?.items ?? [];
+  const availableCount = items.filter((m) => m.availability_status === "available").length;
+  const avgMatch = items.length
+    ? Math.round(items.reduce((sum, m) => sum + m.match_score, 0) / items.length)
+    : 0;
+
+  const STATS = [
+    {
+      label: "Mentors matched",
+      value: String(items.length),
+      sub: "to your business profile",
+      icon: Users2,
+      tone: "lilac" as const,
+    },
+    {
+      label: "Available now",
+      value: String(availableCount),
+      sub: "ready for a session",
+      icon: UserCheck,
+      tone: "indigo" as const,
+    },
+    {
+      label: "Average match",
+      value: items.length ? `${avgMatch}%` : "—",
+      sub: "across your top matches",
+      icon: Percent,
+      tone: "leaf" as const,
+    },
+  ];
+
   return (
     <Page>
       <section className="grid items-center gap-10 py-14 lg:grid-cols-[1.15fr_0.85fr]">
@@ -114,8 +123,7 @@ function Mentors() {
               </span>
             </h1>
             <p className="mt-6 max-w-md text-[15px] leading-relaxed font-light text-muted-foreground sm:text-base">
-              Matched to the exact problem in your records this month — not a directory to scroll
-              through.
+              Matched to your own business profile — not a directory to scroll through.
             </p>
           </div>
         </Reveal>
@@ -150,54 +158,44 @@ function Mentors() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-12">
-        {MENTORS.map((m, i) => (
-          <Reveal key={m.name} delay={i * 80} className={m.span}>
-            <Craft tone={m.tone} texture={i % 2 === 0 ? "weave" : "blockprint"} className="h-full">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-card font-display text-sm text-wine ring-1 ring-wine/20">
-                    {m.name.charAt(0)}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate font-display text-lg font-semibold">
-                      {m.name}
-                    </span>
-                    <span className="block text-[11px] text-muted-foreground">{m.role}</span>
-                  </span>
-                </div>
-                <span className="shrink-0 text-[11px] font-semibold text-wine">{m.match}</span>
-              </div>
-              <p className="mt-3 text-[13px] text-foreground/75">{m.copy}</p>
-              <div className="mt-3">
-                <Pill tone={m.pill.tone}>{m.pill.text}</Pill>
-              </div>
-              <Why>{m.why}</Why>
+        {isLoading ? (
+          <div className="col-span-full flex justify-center py-14">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : isError ? (
+          <div className="card-soft col-span-full rounded-2xl px-6 py-10 text-center text-sm text-muted-foreground">
+            Couldn't load your mentor matches right now — try again shortly.
+          </div>
+        ) : items.length === 0 ? (
+          <Reveal className="col-span-full">
+            <Craft tone="lilac" texture="weave">
+              <Eyebrow>No mentors yet</Eyebrow>
+              <h3 className="mt-2 font-display text-xl font-semibold">
+                The mentor network is just getting started
+              </h3>
+              <p className="mt-2 text-[13px] text-foreground/75">
+                As mentors join Sakhi, we'll match them to your business profile — expertise,
+                industry and availability — the same way we match schemes to your records.
+              </p>
+              <Why>
+                Nobody's been fabricated here — this list stays empty until a real mentor with real
+                availability exists to match.
+              </Why>
               <Basis />
-              <Action>{m.action}</Action>
             </Craft>
           </Reveal>
-        ))}
+        ) : (
+          items.map((mentor, i) => (
+            <Reveal
+              key={mentor.mentor_id}
+              delay={i * 80}
+              className={i % 2 === 0 ? "lg:col-span-7" : "lg:col-span-5"}
+            >
+              <MentorCard mentor={mentor} index={i} />
+            </Reveal>
+          ))
+        )}
       </section>
-
-      <Reveal className="mt-6">
-        <Craft tone="lilac" texture="weave">
-          <Eyebrow>Next conversation</Eyebrow>
-          <h3 className="mt-2 font-display text-xl font-semibold">
-            One call before 4 August is worth more than four in September
-          </h3>
-          <p className="mt-2 text-[13px] text-foreground/75">
-            Shabnam's dyer rotation takes two weeks to set up — starting after Rakhi means carrying
-            the same risk through Diwali.
-          </p>
-          <Why>
-            Your two costliest months, June and October last year, both followed a supplier delay
-            that a second dyer would have absorbed.
-          </Why>
-          <Basis />
-          <Action>Request 30 minutes with Shabnam</Action>
-          <HandNote>Every woman on this list was where you are, with worse records.</HandNote>
-        </Craft>
-      </Reveal>
     </Page>
   );
 }

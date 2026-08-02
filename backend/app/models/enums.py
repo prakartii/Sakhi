@@ -259,6 +259,13 @@ class SocialMediaPlatform(str, Enum):
     PINTEREST = "pinterest"
 
 
+class MarketingAnalysisSourceType(str, Enum):
+    MANUAL = "manual"
+    SCREENSHOT = "screenshot"
+    VIDEO_FRAME = "video_frame"
+    LINK = "link"
+
+
 class SocialConnectionStatus(str, Enum):
     CONNECTED = "connected"
     DISCONNECTED = "disconnected"
